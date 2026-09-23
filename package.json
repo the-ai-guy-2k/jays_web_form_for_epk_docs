@@ -1,0 +1,19 @@
+{
+  "name": "jay-garrett-epk-intake",
+  "version": "1.0.0",
+  "description": "Jay Garrett Web EPK Intake MVP — local intake form for TAIG Promotions",
+  "private": true,
+  "type": "module",
+  "main": "server/start.js",
+  "scripts": {
+    "start": "node server/start.js",
+    "dev": "node --watch server/start.js",
+    "validate": "node scripts/validate-local.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
