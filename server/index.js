@@ -3,7 +3,6 @@ import express from 'express';
 import path from 'node:path';
 import {
   FORM_VERSION,
-  INTAKE_TOKEN,
   PUBLIC_DIR,
   TAIG_REVIEW_TOKEN,
 } from './config.js';
@@ -38,20 +37,12 @@ function requireTaigToken(req, res, next) {
     req.query.token ||
     req.get('x-taig-token') ||
     (req.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  if (!timingSafeEqualString(token, TAIG_REVIEW_TOKEN)) {
+  if (!TAIG_REVIEW_TOKEN || !timingSafeEqualString(token, TAIG_REVIEW_TOKEN)) {
     return res.status(401).json({
       error: 'Unauthorized. A valid review token is required.',
     });
   }
   return next();
-}
-
-function requireIntakeToken(req) {
-  const token =
-    req.body?.intakeToken ||
-    req.query.token ||
-    req.get('x-intake-token');
-  return timingSafeEqualString(token, INTAKE_TOKEN);
 }
 
 function makeResumeToken() {
@@ -71,32 +62,11 @@ export function createApp() {
     });
   });
 
-  // Operator-facing splash (no form; no secrets)
   app.get('/', (_req, res) => {
-    res.type('html').send(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Jay Garrett — EPK Intake</title>
-  <link rel="stylesheet" href="/css/styles.css" />
-</head>
-<body>
-  <div class="splash">
-    <div class="splash-inner">
-      <p class="brand">JAY GARRETT</p>
-      <h1>Electronic Press Kit Information</h1>
-      <p>This intake is private. Open the secure link provided by TAIG Promotions to continue.</p>
-    </div>
-  </div>
-</body>
-</html>`);
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   });
 
-  app.get('/api/bootstrap', (req, res) => {
-    if (!requireIntakeToken(req)) {
-      return res.status(401).json({ error: 'Invalid intake link.' });
-    }
+  app.get('/api/bootstrap', (_req, res) => {
     return res.json({
       formVersion: FORM_VERSION,
       known: {
@@ -120,9 +90,6 @@ export function createApp() {
 
   // Save draft progress (not a final submission)
   app.post('/api/draft', async (req, res) => {
-    if (!requireIntakeToken(req)) {
-      return res.status(401).json({ error: 'Invalid intake link.' });
-    }
     const sections = req.body?.sections;
     if (!sections || typeof sections !== 'object') {
       return res.status(400).json({ error: 'Nothing to save yet.' });
@@ -139,7 +106,7 @@ export function createApp() {
         sectionData: sections,
         currentStep,
       });
-      const resumePath = `/i/${INTAKE_TOKEN}?draft=${encodeURIComponent(saved.resumeToken)}`;
+      const resumePath = `/?draft=${encodeURIComponent(saved.resumeToken)}`;
       return res.status(200).json({
         ok: true,
         status: 'draft',
@@ -164,9 +131,6 @@ export function createApp() {
   });
 
   app.get('/api/draft/:resumeToken', async (req, res) => {
-    if (!requireIntakeToken(req)) {
-      return res.status(401).json({ error: 'Invalid intake link.' });
-    }
     const draft = await getByResumeToken(req.params.resumeToken);
     if (!draft) {
       return res.status(404).json({ error: 'Saved progress not found.' });
@@ -188,9 +152,6 @@ export function createApp() {
   });
 
   app.post('/api/submit', async (req, res) => {
-    if (!requireIntakeToken(req)) {
-      return res.status(401).json({ error: 'Invalid intake link.' });
-    }
 
     const result = validateSubmission(req.body);
     if (!result.ok) {
@@ -267,7 +228,7 @@ export function createApp() {
 
   app.get('/taig/review', async (req, res) => {
     const token = req.query.token || '';
-    if (!timingSafeEqualString(token, TAIG_REVIEW_TOKEN)) {
+    if (!TAIG_REVIEW_TOKEN || !timingSafeEqualString(token, TAIG_REVIEW_TOKEN)) {
       return res
         .status(401)
         .type('html')
@@ -334,16 +295,6 @@ export function createApp() {
 </main>
 </body>
 </html>`);
-  });
-
-  app.get(`/i/:token`, (req, res) => {
-    if (!timingSafeEqualString(req.params.token, INTAKE_TOKEN)) {
-      return res
-        .status(404)
-        .type('html')
-        .send('<!doctype html><title>Not found</title><p>Not found</p>');
-    }
-    return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   });
 
   app.use(express.static(PUBLIC_DIR, { index: false }));

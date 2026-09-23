@@ -14,7 +14,6 @@ process.env.DATABASE_PATH = validationDb;
 // Load modules only after DATABASE_PATH is set
 const { createApp } = await import('../server/index.js');
 const {
-  INTAKE_TOKEN,
   TAIG_REVIEW_TOKEN,
   DATABASE_PATH,
 } = await import('../server/config.js');
@@ -57,7 +56,6 @@ async function request(app, method, url, { headers = {}, body } = {}) {
 
 function samplePayload() {
   return {
-    intakeToken: INTAKE_TOKEN,
     formVersion: 'epk-intake-v1',
     sections: {
       artist: {
@@ -164,26 +162,22 @@ function samplePayload() {
 getDb();
 const app = createApp();
 
-// 01 intake loads
+// 01 direct entry loads
 {
-  const res = await request(app, 'GET', `/i/${INTAKE_TOKEN}`);
+  const res = await request(app, 'GET', '/');
   if (res.status === 200 && res.text.includes('JAY GARRETT') && res.text.includes('cartman.svg')) {
-    pass('01. Intake loads');
-  } else fail('01. Intake loads', `status=${res.status}`);
+    pass('01. Root loads themed intake');
+  } else fail('01. Root loads themed intake', `status=${res.status}`);
 }
 
 {
   const res = await request(app, 'GET', `/i/wrong-token`);
-  if (res.status === 404) pass('01b. Bad intake token rejected');
-  else fail('01b. Bad intake token rejected', `status=${res.status}`);
+  if (res.status === 404) pass('01b. Legacy token route is not required');
+  else fail('01b. Legacy token route', `status=${res.status}`);
 }
 
 {
-  const res = await request(
-    app,
-    'GET',
-    `/api/bootstrap?token=${encodeURIComponent(INTAKE_TOKEN)}`
-  );
+  const res = await request(app, 'GET', '/api/bootstrap');
   const k = res.json?.known;
   if (
     res.status === 200 &&
@@ -217,7 +211,6 @@ const app = createApp();
 
 {
   const partial = {
-    intakeToken: INTAKE_TOKEN,
     currentStep: 1,
     sections: {
       artist: {
@@ -241,16 +234,19 @@ const app = createApp();
     save.json?.message &&
     !String(save.json.message).toLowerCase().includes('received your electronic')
   ) {
-    pass('11-draft. Partial draft saves with resume token', save.json.resumeToken);
+    pass('11-draft. Partial draft saves with resume token');
   } else {
     fail('11-draft. Draft save', JSON.stringify(save.json));
   }
 
   const resumeToken = save.json?.resumeToken;
+  if (save.json?.resumePath === `/?draft=${encodeURIComponent(resumeToken)}`) {
+    pass('11b-draft. Resume link returns to root');
+  } else fail('11b-draft. Resume link', 'Expected a root draft URL');
   const loaded = await request(
     app,
     'GET',
-    `/api/draft/${encodeURIComponent(resumeToken)}?token=${encodeURIComponent(INTAKE_TOKEN)}`
+    `/api/draft/${encodeURIComponent(resumeToken)}`
   );
   if (
     loaded.status === 200 &&
@@ -283,7 +279,7 @@ const app = createApp();
   const after = await request(
     app,
     'GET',
-    `/api/draft/${encodeURIComponent(resumeToken)}?token=${encodeURIComponent(INTAKE_TOKEN)}`
+    `/api/draft/${encodeURIComponent(resumeToken)}`
   );
   if (after.status === 409) {
     pass('23. Draft save path no longer editable after submit');
@@ -391,22 +387,41 @@ let submittedAt = null;
   const res = await request(app, 'GET', '/');
   if (
     res.status === 200 &&
-    res.text.includes('JAY GARRETT') &&
-    !res.text.includes('section-form') &&
-    !res.text.includes('Submit Intake')
+    res.text.includes('Section 1 of 10') &&
+    res.text.includes('/js/app.js') &&
+    !res.text.includes('Open the secure link')
   ) {
-    pass('13b. Root splash does not expose intake form');
-  } else fail('13b. Root exposure', `status=${res.status}`);
+    pass('13b. Root serves intake shell without private-link splash');
+  } else fail('13b. Root intake', `status=${res.status}`);
 }
 
 {
-  const res = await request(app, 'GET', `/i/${INTAKE_TOKEN}`);
+  const res = await request(app, 'GET', '/');
   if (
     !res.text.includes(TAIG_REVIEW_TOKEN) &&
     !res.text.includes('DATABASE_PATH')
   ) {
     pass('17. No secrets exposed in intake HTML');
   } else fail('17. Secrets exposed');
+}
+
+{
+  const source = fs.readFileSync(path.join(root, 'public', 'js', 'app.js'), 'utf8');
+  if (
+    source.includes("view: 'form'") &&
+    source.includes("fetch('/api/bootstrap')") &&
+    !source.includes('btn-start') &&
+    !source.includes('intakeToken')
+  ) pass('ENTRY. Form boots directly without an intake access token or Start button');
+  else fail('ENTRY. Direct-entry client code');
+}
+
+{
+  const deniedReview = await request(app, 'GET', '/taig/review');
+  const deniedExport = await request(app, 'GET', `/api/taig/submissions/${submissionId}/export.json`);
+  if (deniedReview.status === 401 && deniedExport.status === 401) {
+    pass('SECURITY. TAIG review and export remain protected');
+  } else fail('SECURITY. TAIG protection', `review=${deniedReview.status}, export=${deniedExport.status}`);
 }
 
 {
@@ -475,7 +490,7 @@ let submittedAt = null;
     css.includes('site-header') &&
     css.includes('--gold') &&
     css.includes('sidebar') &&
-    css.includes('welcome-card')
+    css.includes('.card-mascot')
   ) {
     pass('18. Mobile-first Cartman theme CSS present');
   } else fail('18. Mobile CSS');
@@ -484,12 +499,12 @@ let submittedAt = null;
 {
   const appJs = fs.readFileSync(path.join(root, 'public', 'js', 'app.js'), 'utf8');
   if (
-    appJs.includes("Let's Get Started") &&
+    !appJs.includes("Let's Get Started") &&
     appJs.includes('Review Your Information') &&
     appJs.includes('Thank You!') &&
     appJs.includes('cartman-celebrate.svg')
   ) {
-    pass('THEME. Welcome / Review / Thank You Cartman screens present');
+    pass('THEME. Intake / Review / Thank You Cartman screens present');
   } else fail('THEME. Missing themed screens');
 }
 

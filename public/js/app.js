@@ -24,7 +24,7 @@
   };
 
   const state = {
-    view: 'welcome', // welcome | form | review | success
+    view: 'form', // form | review | success
     step: 0,
     known: {},
     data: {},
@@ -32,15 +32,8 @@
     submitting: false,
     saving: false,
     result: null,
-    intakeToken: '',
     resumeToken: '',
   };
-
-  function intakeTokenFromPath() {
-    const parts = location.pathname.split('/').filter(Boolean);
-    if (parts[0] === 'i' && parts[1]) return parts[1];
-    return '';
-  }
 
   function draftTokenFromQuery() {
     return new URLSearchParams(location.search).get('draft') || '';
@@ -154,7 +147,6 @@
   function updateShell() {
     if (!shellEl) return;
     shellEl.classList.remove(
-      'shell-welcome',
       'shell-form',
       'shell-review',
       'shell-success'
@@ -201,7 +193,7 @@
   }
 
   function updateProgress() {
-    if (state.view === 'welcome' || state.view === 'success') return;
+    if (state.view === 'success') return;
     const idx = state.view === 'review' ? sections.length : state.step;
     const human =
       state.view === 'review'
@@ -587,35 +579,6 @@
     return `<div class="field${errClass}">${label}${prompt}${hint}<input type="${inputType}" id="${field.key}" name="${field.key}" value="${escapeHtml(value)}"${min}${max} />${err}</div>`;
   }
 
-  function renderWelcome() {
-    appEl.innerHTML = `<div class="welcome">
-      <div class="welcome-card">
-        <div class="welcome-hero">
-          <div>
-            <p class="brand">JAY GARRETT</p>
-            <p class="brand-sub">EPK INTAKE FORM</p>
-          </div>
-          <img class="welcome-mascot" src="/img/cartman.svg" alt="" width="140" height="168" />
-        </div>
-        <div class="welcome-copy">
-          <p>Help us build your professional Electronic Press Kit. This form collects the information TAIG Promotions needs for radio, press, venues, promoters, booking contacts, and other industry opportunities.</p>
-          <div class="welcome-cats">
-            <div class="welcome-cat"><span class="icon" aria-hidden="true">🎵</span> Music</div>
-            <div class="welcome-cat"><span class="icon" aria-hidden="true">📷</span> Photos</div>
-            <div class="welcome-cat"><span class="icon" aria-hidden="true">🎙️</span> Press</div>
-            <div class="welcome-cat"><span class="icon" aria-hidden="true">📅</span> Shows</div>
-          </div>
-          <button type="button" class="btn btn-start" id="btn-start">Let's Get Started</button>
-        </div>
-      </div>
-    </div>`;
-    document.getElementById('btn-start').onclick = () => {
-      state.view = 'form';
-      state.step = 0;
-      render();
-    };
-  }
-
   function renderSection() {
     const section = sections[state.step];
     const data = state.data[section.id];
@@ -652,7 +615,7 @@
       <div id="section-flash"></div>
       <form id="section-form" novalidate>${fieldsHtml}
         <div class="nav">
-          <button type="button" class="btn btn-secondary" id="btn-back">${isFirst ? 'Welcome' : 'Back'}</button>
+          <button type="button" class="btn btn-secondary" id="btn-back" ${isFirst ? 'disabled' : ''}>Back</button>
           <button type="button" class="btn btn-gold" id="btn-save">Save Progress</button>
           <span class="spacer"></span>
           <button type="submit" class="btn btn-primary" id="btn-next">${isLast ? 'Review' : 'Next'}</button>
@@ -783,12 +746,13 @@
       <p><strong>Submitted:</strong> <span class="mono">${escapeHtml(r.submittedAt)}</span></p>
       <p>TAIG Promotions will review this information before using it in your Electronic Press Kit or promotional materials.</p>
       <div class="nav" style="justify-content:center;margin-top:1.25rem">
-        <button type="button" class="btn btn-secondary" id="btn-home">Return to Start</button>
+        <button type="button" class="btn btn-secondary" id="btn-home">Start a New Intake</button>
       </div>
     </section>`;
     document.getElementById('btn-home').onclick = () => {
       state.result = null;
-      state.view = 'welcome';
+      initData();
+      state.view = 'form';
       state.step = 0;
       state.resumeToken = '';
       const url = new URL(location.href);
@@ -821,12 +785,8 @@
     document.getElementById('btn-back').onclick = () => {
       collectCurrentSection();
       state.errors = {};
-      if (state.step === 0) {
-        state.view = 'welcome';
-      } else {
-        state.view = 'form';
-        state.step = Math.max(0, state.step - 1);
-      }
+      state.view = 'form';
+      state.step = Math.max(0, state.step - 1);
       render();
     };
     document.getElementById('btn-save').onclick = () => {
@@ -891,7 +851,6 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          intakeToken: state.intakeToken,
           resumeToken: state.resumeToken || undefined,
           currentStep:
             state.view === 'review' ? sections.length : state.step,
@@ -963,7 +922,6 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          intakeToken: state.intakeToken,
           resumeToken: state.resumeToken || undefined,
           formVersion: window.EPK_SCHEMA.formVersion,
           sections: state.data,
@@ -1011,10 +969,6 @@
       renderSuccess();
       return;
     }
-    if (state.view === 'welcome') {
-      renderWelcome();
-      return;
-    }
     if (state.view === 'review') {
       renderReview();
       return;
@@ -1023,18 +977,10 @@
   }
 
   async function boot() {
-    state.intakeToken = intakeTokenFromPath();
-    if (!state.intakeToken) {
-      appEl.innerHTML =
-        '<section class="card"><p>This page needs a valid intake link.</p></section>';
-      return;
-    }
     initData();
     try {
-      const res = await fetch(
-        `/api/bootstrap?token=${encodeURIComponent(state.intakeToken)}`
-      );
-      if (!res.ok) throw new Error('bad token');
+      const res = await fetch('/api/bootstrap');
+      if (!res.ok) throw new Error('bootstrap failed');
       const body = await res.json();
       state.known = body.known || {};
       if (state.known.artistName) {
@@ -1055,16 +1001,14 @@
       }
     } catch {
       appEl.innerHTML =
-        '<section class="card"><p>This intake link is not valid.</p></section>';
+        '<section class="card"><p>Could not load the intake. Please refresh and try again.</p></section>';
       return;
     }
 
     const draftToken = draftTokenFromQuery();
     if (draftToken) {
       try {
-        const dres = await fetch(
-          `/api/draft/${encodeURIComponent(draftToken)}?token=${encodeURIComponent(state.intakeToken)}`
-        );
+        const dres = await fetch(`/api/draft/${encodeURIComponent(draftToken)}`);
         const dbody = await dres.json();
         if (dres.ok) {
           state.resumeToken = dbody.resumeToken;
@@ -1083,19 +1027,19 @@
           appEl.innerHTML = `<section class="card"><p>${escapeHtml(dbody.error || 'Already submitted.')}</p></section>`;
           return;
         } else {
-          state.view = 'welcome';
+          state.view = 'form';
           showDraftBanner(
             `Could not load that saved link. You can still fill out a new form and save progress.`
           );
         }
       } catch {
-        state.view = 'welcome';
+        state.view = 'form';
         showDraftBanner(
           `Could not load saved progress right now. You can still continue with a new form.`
         );
       }
     } else {
-      state.view = 'welcome';
+      state.view = 'form';
     }
 
     render();

@@ -6,7 +6,7 @@ This is an **intake form**, not the public EPK website.
 
 ## What it does
 
-1. TAIG sends Jay one private URL  
+1. Jay opens the base URL directly to Section 1
 2. Jay completes a 10-section mobile-friendly form  
 3. Jay can **Save Progress** and return later via a resume link  
 4. Jay reviews answers and submits  
@@ -23,7 +23,7 @@ This is an **intake form**, not the public EPK website.
 ```bash
 cd jays_web_form_for_epk_docs
 copy .env.example .env
-# Edit .env — set strong INTAKE_TOKEN and TAIG_REVIEW_TOKEN
+# Edit .env — set a strong TAIG_REVIEW_TOKEN
 npm install
 npm start
 ```
@@ -34,12 +34,12 @@ After `npm start` (default port 3000):
 
 | Role | URL |
 |------|-----|
-| Jay intake | `http://localhost:3000/i/<INTAKE_TOKEN>` |
+| Jay intake | `http://localhost:3000/` |
 | TAIG review | `http://localhost:3000/taig/review?token=<TAIG_REVIEW_TOKEN>` |
 | JSON list (protected) | `http://localhost:3000/api/taig/submissions?token=<TAIG_REVIEW_TOKEN>` |
 | JSON export | `http://localhost:3000/api/taig/submissions/<id>/export.json?token=<TAIG_REVIEW_TOKEN>` |
 
-Root `/` intentionally returns **Not found** (no public listing).
+Root `/` opens the intake directly. Saved drafts have unguessable resume links at `/?draft=<resumeToken>`.
 
 ## Form version
 
@@ -58,7 +58,6 @@ Submissions are stored in local SQLite:
 See `.env.example`:
 
 - `PORT`
-- `INTAKE_TOKEN` — unguessable path segment for Jay
 - `TAIG_REVIEW_TOKEN` — required for review/export
 - `DATABASE_PATH` — optional override
 

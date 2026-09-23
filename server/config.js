@@ -30,7 +30,6 @@ loadEnvFile();
 
 export const FORM_VERSION = 'epk-intake-v1';
 export const PORT = Number(process.env.PORT || 3000);
-export const INTAKE_TOKEN = process.env.INTAKE_TOKEN || '';
 export const TAIG_REVIEW_TOKEN = process.env.TAIG_REVIEW_TOKEN || '';
 export const ROOT_DIR = rootDir;
 export const PUBLIC_DIR = path.join(rootDir, 'public');
@@ -43,9 +42,6 @@ export const USE_POSTGRES = Boolean(DATABASE_URL);
 
 export function assertConfig() {
   const missing = [];
-  if (!INTAKE_TOKEN || INTAKE_TOKEN.includes('change-me')) {
-    missing.push('INTAKE_TOKEN');
-  }
   if (!TAIG_REVIEW_TOKEN || TAIG_REVIEW_TOKEN.includes('change-me')) {
     missing.push('TAIG_REVIEW_TOKEN');
   }
