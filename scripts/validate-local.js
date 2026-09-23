@@ -167,7 +167,7 @@ const app = createApp();
 // 01 intake loads
 {
   const res = await request(app, 'GET', `/i/${INTAKE_TOKEN}`);
-  if (res.status === 200 && res.text.includes('JAY GARRETT')) {
+  if (res.status === 200 && res.text.includes('JAY GARRETT') && res.text.includes('cartman.svg')) {
     pass('01. Intake loads');
   } else fail('01. Intake loads', `status=${res.status}`);
 }
@@ -471,12 +471,26 @@ let submittedAt = null;
   const css = fs.readFileSync(path.join(root, 'public', 'css', 'styles.css'), 'utf8');
   if (
     css.includes('min-height: 48px') &&
-    css.includes('max-width: 720px') &&
+    css.includes('max-width: 760px') &&
     css.includes('site-header') &&
-    css.includes('--gold')
+    css.includes('--gold') &&
+    css.includes('sidebar') &&
+    css.includes('welcome-card')
   ) {
-    pass('18. Mobile-first polished UI CSS present');
+    pass('18. Mobile-first Cartman theme CSS present');
   } else fail('18. Mobile CSS');
+}
+
+{
+  const appJs = fs.readFileSync(path.join(root, 'public', 'js', 'app.js'), 'utf8');
+  if (
+    appJs.includes("Let's Get Started") &&
+    appJs.includes('Review Your Information') &&
+    appJs.includes('Thank You!') &&
+    appJs.includes('cartman-celebrate.svg')
+  ) {
+    pass('THEME. Welcome / Review / Thank You Cartman screens present');
+  } else fail('THEME. Missing themed screens');
 }
 
 {

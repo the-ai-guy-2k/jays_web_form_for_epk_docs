@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Jay Garrett — Electronic Press Kit Information</title>
+    <title>Jay Garrett — EPK Intake Form</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,50 +12,57 @@
     />
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
-  <body>
-    <header class="site-header">
-      <div class="site-header-inner">
-        <p class="brand">JAY GARRETT</p>
-        <p class="brand-sub">Electronic Press Kit Information</p>
-      </div>
-    </header>
-
-    <div class="page">
-      <section class="intro-panel">
-        <p class="lede" id="intro-text">
-          TAIG Promotions is building your professional Electronic Press Kit for
-          radio, press, venues, promoters, and booking contacts. This form
-          collects the remaining information and links we need. Answer what you
-          know. Optional items can be skipped. You can save your progress and
-          come back later. TAIG will review everything before it is used
-          publicly.
-        </p>
-        <div class="progress-wrap" aria-live="polite">
-          <div class="progress-label">
-            <span id="progress-text">Section 1 of 10</span>
-            <span id="progress-pct">0%</span>
-          </div>
-          <div
-            class="progress-bar"
-            role="progressbar"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow="0"
-          >
-            <div class="progress-fill" id="progress-fill"></div>
-          </div>
+  <body class="theme-cartman">
+    <div id="shell" class="shell shell-welcome">
+      <aside class="sidebar" id="sidebar" aria-label="Section navigation">
+        <div class="sidebar-brand">
+          <p class="brand">JAY GARRETT</p>
+          <p class="brand-sub">EPK INTAKE FORM</p>
         </div>
-        <div id="draft-banner" class="draft-banner" hidden></div>
-      </section>
+        <nav class="sidebar-nav" id="sidebar-nav"></nav>
+        <div class="sidebar-mascot">
+          <img src="/img/cartman.svg" alt="" width="96" height="115" />
+        </div>
+      </aside>
 
-      <main id="app" class="app"></main>
+      <div class="main-column">
+        <header class="site-header" id="site-header">
+          <div class="site-header-inner">
+            <p class="brand">JAY GARRETT</p>
+            <p class="brand-sub">EPK INTAKE FORM</p>
+          </div>
+        </header>
 
-      <footer class="foot">
-        <p>
-          Private intake for TAIG Promotions. Your answers are reviewed before
-          any public use.
-        </p>
-      </footer>
+        <div class="page">
+          <section class="intro-panel" id="intro-panel" hidden>
+            <div class="progress-wrap" aria-live="polite">
+              <div class="progress-label">
+                <span id="progress-text">Section 1 of 10</span>
+                <span id="progress-pct">0%</span>
+              </div>
+              <div
+                class="progress-bar"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+            </div>
+            <div id="draft-banner" class="draft-banner" hidden></div>
+          </section>
+
+          <main id="app" class="app"></main>
+
+          <footer class="foot">
+            <p>
+              Private intake for TAIG Promotions. Your answers are reviewed
+              before any public use.
+            </p>
+          </footer>
+        </div>
+      </div>
     </div>
     <script src="/js/schema.js"></script>
     <script src="/js/app.js"></script>

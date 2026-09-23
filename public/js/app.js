@@ -5,12 +5,27 @@
   const progressFill = document.getElementById('progress-fill');
   const progressBar = document.querySelector('.progress-bar');
   const draftBanner = document.getElementById('draft-banner');
+  const shellEl = document.getElementById('shell');
+  const introPanel = document.getElementById('intro-panel');
+  const sidebarNav = document.getElementById('sidebar-nav');
 
   const sections = window.EPK_SCHEMA.sections;
-  const TOTAL_STEPS = sections.length + 1; // + review
+  const SECTION_ICONS = {
+    artist: '👤',
+    bio: '📄',
+    album: '💿',
+    featured: '🎵',
+    photos: '📷',
+    streaming: '▶️',
+    social: '🔗',
+    proof: '🎙️',
+    live: '📅',
+    contact: '✅',
+  };
 
   const state = {
-    step: 0, // 0..sections.length-1 form, sections.length = review, success after submit
+    view: 'welcome', // welcome | form | review | success
+    step: 0,
     known: {},
     data: {},
     errors: {},
@@ -136,22 +151,71 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v).trim());
   }
 
+  function updateShell() {
+    if (!shellEl) return;
+    shellEl.classList.remove(
+      'shell-welcome',
+      'shell-form',
+      'shell-review',
+      'shell-success'
+    );
+    shellEl.classList.add(`shell-${state.view}`);
+    if (introPanel) {
+      introPanel.hidden = state.view !== 'form' && state.view !== 'review';
+    }
+    renderSidebar();
+  }
+
+  function renderSidebar() {
+    if (!sidebarNav) return;
+    sidebarNav.innerHTML = sections
+      .map((section, idx) => {
+        const active =
+          state.view === 'form' && state.step === idx ? ' active' : '';
+        const icon = SECTION_ICONS[section.id] || '•';
+        return `<button type="button" data-goto="${idx}" class="${active.trim()}"><span aria-hidden="true">${icon}</span> ${idx + 1}. ${escapeHtml(section.title)}</button>`;
+      })
+      .join('');
+    if (state.view === 'review') {
+      sidebarNav.insertAdjacentHTML(
+        'beforeend',
+        `<button type="button" data-goto="review" class="active">Review</button>`
+      );
+    }
+    sidebarNav.querySelectorAll('[data-goto]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-goto');
+        if (state.view === 'form') collectCurrentSection();
+        if (target === 'review') {
+          // only allow review jump if all required on current path — soft allow for UX after visiting
+          state.view = 'review';
+          render();
+          return;
+        }
+        state.view = 'form';
+        state.step = Number(target);
+        state.errors = {};
+        render();
+      });
+    });
+  }
+
   function updateProgress() {
-    const idx = Math.min(state.step, sections.length);
-    const human = Math.min(idx + 1, TOTAL_STEPS);
-    const label =
-      idx < sections.length
-        ? `Section ${human} of ${sections.length}`
-        : 'Review';
+    if (state.view === 'welcome' || state.view === 'success') return;
+    const idx = state.view === 'review' ? sections.length : state.step;
+    const human =
+      state.view === 'review'
+        ? 'Review'
+        : `Section ${state.step + 1} of ${sections.length}`;
     const pct = Math.round((idx / sections.length) * 100);
-    progressText.textContent = label;
+    progressText.textContent = human;
     progressPct.textContent = `${pct}%`;
     progressFill.style.width = `${pct}%`;
     progressBar.setAttribute('aria-valuenow', String(pct));
   }
 
   function collectCurrentSection() {
-    if (state.step >= sections.length) return;
+    if (state.view !== 'form') return;
     const section = sections[state.step];
     const root = appEl.querySelector(`[data-section="${section.id}"]`);
     if (!root) return;
@@ -355,12 +419,16 @@
       const inputType = field.type === 'repeat-url' ? 'url' : 'text';
       const rows = (value && value.length ? value : ['']).map(
         (v, i) =>
-          `<div class="repeat-block"><input type="${inputType}" data-index="${i}" placeholder="${field.type === 'tracklist' ? `Song ${i + 1}` : field.itemLabel || 'Item'}" value="${escapeHtml(v)}" /></div>`
+          `<div class="repeat-block">${
+            field.type === 'tracklist'
+              ? `<div class="song-card-label">Track ${i + 1}</div>`
+              : ''
+          }<input type="${inputType}" data-index="${i}" placeholder="${field.type === 'tracklist' ? 'Song title' : field.itemLabel || 'Item'}" value="${escapeHtml(v)}" /></div>`
       );
       return `<div class="field${errClass}" data-repeat="${field.key}">${label}${prompt}${hint}${rows.join('')}
         <div class="repeat-actions">
-          <button type="button" class="btn btn-ghost" data-add="${field.key}">Add another</button>
-          <button type="button" class="btn btn-ghost" data-remove="${field.key}">Remove last</button>
+          <button type="button" class="btn btn-ghost" data-add="${field.key}">${field.type === 'tracklist' ? 'Add Another Track' : 'Add another'}</button>
+          <button type="button" class="btn btn-ghost" data-remove="${field.key}">${field.type === 'tracklist' ? 'Remove Track' : 'Remove last'}</button>
         </div>${err}</div>`;
     }
 
@@ -519,6 +587,35 @@
     return `<div class="field${errClass}">${label}${prompt}${hint}<input type="${inputType}" id="${field.key}" name="${field.key}" value="${escapeHtml(value)}"${min}${max} />${err}</div>`;
   }
 
+  function renderWelcome() {
+    appEl.innerHTML = `<div class="welcome">
+      <div class="welcome-card">
+        <div class="welcome-hero">
+          <div>
+            <p class="brand">JAY GARRETT</p>
+            <p class="brand-sub">EPK INTAKE FORM</p>
+          </div>
+          <img class="welcome-mascot" src="/img/cartman.svg" alt="" width="140" height="168" />
+        </div>
+        <div class="welcome-copy">
+          <p>Help us build your professional Electronic Press Kit. This form collects the information TAIG Promotions needs for radio, press, venues, promoters, booking contacts, and other industry opportunities.</p>
+          <div class="welcome-cats">
+            <div class="welcome-cat"><span class="icon" aria-hidden="true">🎵</span> Music</div>
+            <div class="welcome-cat"><span class="icon" aria-hidden="true">📷</span> Photos</div>
+            <div class="welcome-cat"><span class="icon" aria-hidden="true">🎙️</span> Press</div>
+            <div class="welcome-cat"><span class="icon" aria-hidden="true">📅</span> Shows</div>
+          </div>
+          <button type="button" class="btn btn-start" id="btn-start">Let's Get Started</button>
+        </div>
+      </div>
+    </div>`;
+    document.getElementById('btn-start').onclick = () => {
+      state.view = 'form';
+      state.step = 0;
+      render();
+    };
+  }
+
   function renderSection() {
     const section = sections[state.step];
     const data = state.data[section.id];
@@ -545,20 +642,23 @@
 
     const isFirst = state.step === 0;
     const isLast = state.step === sections.length - 1;
+    const icon = SECTION_ICONS[section.id] || '•';
+    const showMascot = ['artist', 'featured', 'album'].includes(section.id);
 
     appEl.innerHTML = `<section class="card" data-section="${section.id}">
-      <h2 class="section-title">${escapeHtml(section.title)}</h2>
+      <h2 class="section-title"><span class="section-icon" aria-hidden="true">${icon}</span>${escapeHtml(section.title)}</h2>
       <p class="section-help">${escapeHtml(section.help || '')}</p>
       ${context}
       <div id="section-flash"></div>
       <form id="section-form" novalidate>${fieldsHtml}
         <div class="nav">
-          <button type="button" class="btn btn-secondary" id="btn-back" ${isFirst ? 'disabled' : ''}>Back</button>
+          <button type="button" class="btn btn-secondary" id="btn-back">${isFirst ? 'Welcome' : 'Back'}</button>
           <button type="button" class="btn btn-gold" id="btn-save">Save Progress</button>
           <span class="spacer"></span>
           <button type="submit" class="btn btn-primary" id="btn-next">${isLast ? 'Review' : 'Next'}</button>
         </div>
       </form>
+      ${showMascot ? '<img class="card-mascot" src="/img/cartman.svg" alt="" width="72" height="86" />' : ''}
     </section>`;
 
     bindSectionEvents();
@@ -592,26 +692,54 @@
     return String(value);
   }
 
+  function formatReviewValue(field, value) {
+    const shown = displayValue(field, value);
+    if (!shown) {
+      return `<div class="review-value review-empty">${field.optional ? 'Not provided (optional)' : 'Not answered'}</div>`;
+    }
+    if (field.type === 'url' || field.type === 'email') {
+      const href =
+        field.type === 'email' ? `mailto:${shown}` : shown;
+      if (field.type === 'url' && /^https?:\/\//i.test(shown)) {
+        return `<div class="review-value"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shown)}</a></div>`;
+      }
+    }
+    if (field.type === 'repeat-url') {
+      const links = String(shown)
+        .split('\n')
+        .map((line) => {
+          if (/^https?:\/\//i.test(line)) {
+            return `<a href="${escapeHtml(line)}" target="_blank" rel="noopener noreferrer">${escapeHtml(line)}</a>`;
+          }
+          return escapeHtml(line);
+        })
+        .join('<br>');
+      return `<div class="review-value">${links}</div>`;
+    }
+    return `<div class="review-value">${escapeHtml(shown).replace(/\n/g, '<br>')}</div>`;
+  }
+
   function renderReview() {
     const blocks = sections
       .map((section) => {
+        const icon = SECTION_ICONS[section.id] || '•';
         const rows = section.fields
           .map((field) => {
-            const shown = displayValue(field, state.data[section.id][field.key]);
-            const body = shown
-              ? `<div class="review-value">${escapeHtml(shown).replace(/\n/g, '<br>')}</div>`
-              : `<div class="review-value review-empty">${field.optional ? 'Not provided (optional)' : 'Not answered'}</div>`;
+            const body = formatReviewValue(
+              field,
+              state.data[section.id][field.key]
+            );
             return `<div class="review-row"><div class="review-label">${escapeHtml(field.label)}</div>${body}</div>`;
           })
           .join('');
-        return `<div class="review-section"><h3>${escapeHtml(section.title)}</h3>${rows}
+        return `<div class="review-section"><h3><span class="section-icon" aria-hidden="true">${icon}</span>${escapeHtml(section.title)}</h3>${rows}
           <button type="button" class="btn btn-ghost" data-edit="${section.id}">Edit this section</button>
         </div>`;
       })
       .join('');
 
     appEl.innerHTML = `<section class="card">
-      <h2 class="section-title">Review</h2>
+      <h2 class="section-title">Review Your Information</h2>
       <p class="section-help">Check your answers before submitting. You can go back and edit any section. Saving progress here does not submit.</p>
       <div id="review-errors"></div>
       ${blocks}
@@ -625,6 +753,7 @@
 
     updateProgress();
     document.getElementById('btn-back').onclick = () => {
+      state.view = 'form';
       state.step = sections.length - 1;
       render();
     };
@@ -633,6 +762,7 @@
     appEl.querySelectorAll('[data-edit]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-edit');
+        state.view = 'form';
         state.step = sections.findIndex((s) => s.id === id);
         render();
       });
@@ -642,15 +772,31 @@
 
   function renderSuccess() {
     const r = state.result;
-    appEl.innerHTML = `<section class="card success">
-      <h2>Thank you</h2>
+    state.view = 'success';
+    updateShell();
+    appEl.innerHTML = `<section class="card success-screen">
+      <img src="/img/cartman-celebrate.svg" alt="" width="140" height="153" />
+      <h2>Thank You!</h2>
+      <p class="lead">Your EPK information has been submitted.</p>
       <p>${escapeHtml(r.message)}</p>
-      <p>Reference: <span class="mono">${escapeHtml(r.submissionId)}</span></p>
-      <p>Received: <span class="mono">${escapeHtml(r.submittedAt)}</span></p>
+      <p><strong>Submission ID:</strong> <span class="mono">${escapeHtml(r.submissionId)}</span></p>
+      <p><strong>Submitted:</strong> <span class="mono">${escapeHtml(r.submittedAt)}</span></p>
+      <p>TAIG Promotions will review this information before using it in your Electronic Press Kit or promotional materials.</p>
+      <div class="nav" style="justify-content:center;margin-top:1.25rem">
+        <button type="button" class="btn btn-secondary" id="btn-home">Return to Start</button>
+      </div>
     </section>`;
-    progressText.textContent = 'Submitted';
-    progressPct.textContent = '100%';
-    progressFill.style.width = '100%';
+    document.getElementById('btn-home').onclick = () => {
+      state.result = null;
+      state.view = 'welcome';
+      state.step = 0;
+      state.resumeToken = '';
+      const url = new URL(location.href);
+      url.searchParams.delete('draft');
+      history.replaceState({}, '', url.toString());
+      showDraftBanner('', { hidden: true });
+      render();
+    };
   }
 
   function bindSectionEvents() {
@@ -664,13 +810,23 @@
         if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
-      state.step += 1;
+      if (state.step >= sections.length - 1) {
+        state.view = 'review';
+      } else {
+        state.view = 'form';
+        state.step += 1;
+      }
       render();
     });
     document.getElementById('btn-back').onclick = () => {
       collectCurrentSection();
       state.errors = {};
-      state.step = Math.max(0, state.step - 1);
+      if (state.step === 0) {
+        state.view = 'welcome';
+      } else {
+        state.view = 'form';
+        state.step = Math.max(0, state.step - 1);
+      }
       render();
     };
     document.getElementById('btn-save').onclick = () => {
@@ -737,7 +893,8 @@
         body: JSON.stringify({
           intakeToken: state.intakeToken,
           resumeToken: state.resumeToken || undefined,
-          currentStep: state.step,
+          currentStep:
+            state.view === 'review' ? sections.length : state.step,
           sections: state.data,
         }),
       });
@@ -832,7 +989,8 @@
       state.result = body;
       state.submitting = false;
       showDraftBanner('', { hidden: true });
-      renderSuccess();
+      state.view = 'success';
+      render();
     } catch (err) {
       const box = document.getElementById('review-errors');
       if (box) {
@@ -848,11 +1006,16 @@
   }
 
   function render() {
-    if (state.result) {
+    updateShell();
+    if (state.view === 'success' || state.result) {
       renderSuccess();
       return;
     }
-    if (state.step >= sections.length) {
+    if (state.view === 'welcome') {
+      renderWelcome();
+      return;
+    }
+    if (state.view === 'review') {
       renderReview();
       return;
     }
@@ -906,10 +1069,13 @@
         if (dres.ok) {
           state.resumeToken = dbody.resumeToken;
           mergeLoadedSections(dbody.sections);
-          state.step = Math.min(
-            Number(dbody.currentStep || 0),
-            sections.length
-          );
+          const step = Number(dbody.currentStep || 0);
+          if (step >= sections.length) {
+            state.view = 'review';
+          } else {
+            state.view = 'form';
+            state.step = Math.min(step, sections.length - 1);
+          }
           showDraftBanner(
             `<strong>Welcome back.</strong> Your saved answers were restored. Continue where you left off, or save again anytime.`
           );
@@ -917,15 +1083,19 @@
           appEl.innerHTML = `<section class="card"><p>${escapeHtml(dbody.error || 'Already submitted.')}</p></section>`;
           return;
         } else {
+          state.view = 'welcome';
           showDraftBanner(
             `Could not load that saved link. You can still fill out a new form and save progress.`
           );
         }
       } catch {
+        state.view = 'welcome';
         showDraftBanner(
           `Could not load saved progress right now. You can still continue with a new form.`
         );
       }
+    } else {
+      state.view = 'welcome';
     }
 
     render();

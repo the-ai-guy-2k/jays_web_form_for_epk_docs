@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 240" role="img" aria-label="Decorative cartoon character celebrating">
+  <ellipse cx="110" cy="225" rx="58" ry="10" fill="#000" opacity="0.18"/>
+  <ellipse cx="110" cy="180" rx="64" ry="50" fill="#2B5AA8"/>
+  <path d="M52 158 Q110 180 168 158 L162 175 Q110 196 58 175 Z" fill="#C62828"/>
+  <circle cx="110" cy="98" r="70" fill="#F5D7B0"/>
+  <path d="M48 72 Q64 34 110 30 Q156 34 172 72 Q150 56 110 52 Q70 56 48 72 Z" fill="#F4C430"/>
+  <path d="M46 80 Q50 26 110 20 Q170 26 174 80 Q140 62 110 60 Q80 62 46 80 Z" fill="#3DB8D4"/>
+  <ellipse cx="110" cy="80" rx="64" ry="14" fill="#2AA0BA"/>
+  <circle cx="110" cy="26" r="11" fill="#F4C430"/>
+  <ellipse cx="88" cy="102" rx="17" ry="19" fill="#fff"/>
+  <ellipse cx="132" cy="102" rx="17" ry="19" fill="#fff"/>
+  <circle cx="92" cy="106" r="5" fill="#1a1a1a"/>
+  <circle cx="136" cy="106" r="5" fill="#1a1a1a"/>
+  <path d="M88 138 Q110 155 132 138" fill="none" stroke="#1a1a1a" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- arms up -->
+  <circle cx="38" cy="120" r="15" fill="#F5D7B0"/>
+  <circle cx="182" cy="120" r="15" fill="#F5D7B0"/>
+  <path d="M55 160 Q40 145 38 125" fill="none" stroke="#2B5AA8" stroke-width="18" stroke-linecap="round"/>
+  <path d="M165 160 Q180 145 182 125" fill="none" stroke="#2B5AA8" stroke-width="18" stroke-linecap="round"/>
+  <!-- sparkles -->
+  <circle cx="28" cy="70" r="4" fill="#F4C430"/>
+  <circle cx="192" cy="70" r="4" fill="#F4C430"/>
+  <circle cx="20" cy="110" r="3" fill="#C62828"/>
+  <circle cx="200" cy="110" r="3" fill="#C62828"/>
+</svg>

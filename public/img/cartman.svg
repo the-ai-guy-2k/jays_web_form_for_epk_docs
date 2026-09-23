@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" role="img" aria-label="Decorative cartoon character">
+  <!-- Original stylized motif inspired by classic cartoon proportions; not an official asset -->
+  <ellipse cx="100" cy="220" rx="55" ry="10" fill="#000" opacity="0.18"/>
+  <!-- body / blue shirt -->
+  <ellipse cx="100" cy="175" rx="62" ry="48" fill="#2B5AA8"/>
+  <!-- red trim -->
+  <path d="M45 155 Q100 175 155 155 L150 170 Q100 190 50 170 Z" fill="#C62828"/>
+  <!-- head -->
+  <circle cx="100" cy="95" r="68" fill="#F5D7B0"/>
+  <!-- yellow hair fringe -->
+  <path d="M40 70 Q55 35 100 32 Q145 35 160 70 Q140 55 100 52 Q60 55 40 70 Z" fill="#F4C430"/>
+  <!-- cyan beanie -->
+  <path d="M38 78 Q42 28 100 22 Q158 28 162 78 Q130 62 100 60 Q70 62 38 78 Z" fill="#3DB8D4"/>
+  <ellipse cx="100" cy="78" rx="62" ry="14" fill="#2AA0BA"/>
+  <circle cx="100" cy="28" r="10" fill="#F4C430"/>
+  <!-- eyes -->
+  <ellipse cx="78" cy="100" rx="16" ry="18" fill="#fff"/>
+  <ellipse cx="122" cy="100" rx="16" ry="18" fill="#fff"/>
+  <circle cx="82" cy="104" r="5" fill="#1a1a1a"/>
+  <circle cx="126" cy="104" r="5" fill="#1a1a1a"/>
+  <!-- mouth -->
+  <path d="M78 135 Q100 148 122 135" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+  <!-- hands -->
+  <circle cx="42" cy="175" r="14" fill="#F5D7B0"/>
+  <circle cx="158" cy="175" r="14" fill="#F5D7B0"/>
+</svg>
