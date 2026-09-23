@@ -87,6 +87,12 @@ data/            Local SQLite (gitignored)
 
 Development: `feature/aci-001`
 
+## Replit
+
+See `docs/nebula/passdowns/replit-deploy.md`.
+
+Published Replit filesystems are not durable. Set `DATABASE_URL` (Replit SQL) for live persistence.
+
 ## Out of scope
 
 - Public EPK site

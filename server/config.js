@@ -37,6 +37,9 @@ export const PUBLIC_DIR = path.join(rootDir, 'public');
 export const DATA_DIR = path.join(rootDir, 'data');
 export const DATABASE_PATH =
   process.env.DATABASE_PATH || path.join(DATA_DIR, 'submissions.sqlite');
+/** When set (e.g. Replit Postgres), use Postgres instead of SQLite. */
+export const DATABASE_URL = process.env.DATABASE_URL || '';
+export const USE_POSTGRES = Boolean(DATABASE_URL);
 
 export function assertConfig() {
   const missing = [];

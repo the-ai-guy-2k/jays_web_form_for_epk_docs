@@ -11,6 +11,7 @@ import {
   getSubmissionById,
   insertSubmission,
   listSubmissionSummaries,
+  storageKind,
 } from './db.js';
 import { validateSubmission } from './validation.js';
 
@@ -48,7 +49,14 @@ export function createApp() {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '2mb' }));
 
-  // Known-data bootstrap for the form (no secrets)
+  app.get('/health', (_req, res) => {
+    res.json({
+      ok: true,
+      formVersion: FORM_VERSION,
+      storage: storageKind(),
+    });
+  });
+
   app.get('/api/bootstrap', (req, res) => {
     const token = req.query.token || req.get('x-intake-token');
     if (!timingSafeEqualString(token, INTAKE_TOKEN)) {
@@ -75,7 +83,7 @@ export function createApp() {
     });
   });
 
-  app.post('/api/submit', (req, res) => {
+  app.post('/api/submit', async (req, res) => {
     const token = req.body?.intakeToken || req.get('x-intake-token');
     if (!timingSafeEqualString(token, INTAKE_TOKEN)) {
       return res.status(401).json({ error: 'Invalid intake link.' });
@@ -93,7 +101,7 @@ export function createApp() {
     const submittedAt = new Date().toISOString();
     const id = crypto.randomUUID();
     try {
-      const saved = insertSubmission({
+      const saved = await insertSubmission({
         id,
         artistName: result.artistName,
         sectionData: req.body.sections,
@@ -109,7 +117,7 @@ export function createApp() {
           'Thank you. TAIG Promotions has received your Electronic Press Kit information and will review it before it is used publicly.',
       });
     } catch (err) {
-      console.error('[submit] storage failure', err);
+      console.error('[submit] storage failure');
       return res.status(500).json({
         error:
           'We could not save your answers right now. Please try again in a moment. Nothing was published.',
@@ -117,36 +125,39 @@ export function createApp() {
     }
   });
 
-  // Protected TAIG review APIs — no public enumeration without token
-  app.get('/api/taig/submissions', requireTaigToken, (req, res) => {
+  app.get('/api/taig/submissions', requireTaigToken, async (_req, res) => {
+    const submissions = await listSubmissionSummaries();
     return res.json({
       formVersion: FORM_VERSION,
-      submissions: listSubmissionSummaries(),
+      submissions,
     });
   });
 
-  app.get('/api/taig/submissions/:id', requireTaigToken, (req, res) => {
-    const submission = getSubmissionById(req.params.id);
+  app.get('/api/taig/submissions/:id', requireTaigToken, async (req, res) => {
+    const submission = await getSubmissionById(req.params.id);
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found.' });
     }
     return res.json(submission);
   });
 
-  app.get('/api/taig/submissions/:id/export.json', requireTaigToken, (req, res) => {
-    const submission = getSubmissionById(req.params.id);
-    if (!submission) {
-      return res.status(404).json({ error: 'Submission not found.' });
+  app.get(
+    '/api/taig/submissions/:id/export.json',
+    requireTaigToken,
+    async (req, res) => {
+      const submission = await getSubmissionById(req.params.id);
+      if (!submission) {
+        return res.status(404).json({ error: 'Submission not found.' });
+      }
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="jay-epk-submission-${submission.id}.json"`
+      );
+      return res.json(submission);
     }
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="jay-epk-submission-${submission.id}.json"`
-    );
-    return res.json(submission);
-  });
+  );
 
-  // Simple HTML review UI for TAIG (token in query)
-  app.get('/taig/review', (req, res) => {
+  app.get('/taig/review', async (req, res) => {
     const token = req.query.token || '';
     if (!timingSafeEqualString(token, TAIG_REVIEW_TOKEN)) {
       return res
@@ -156,9 +167,9 @@ export function createApp() {
           '<!doctype html><html><body style="font-family:system-ui;padding:2rem"><h1>Unauthorized</h1><p>A valid review token is required.</p></body></html>'
         );
     }
-    const summaries = listSubmissionSummaries();
+    const summaries = await listSubmissionSummaries();
     const selectedId = req.query.id || (summaries[0] && summaries[0].id);
-    const selected = selectedId ? getSubmissionById(selectedId) : null;
+    const selected = selectedId ? await getSubmissionById(selectedId) : null;
 
     const listHtml = summaries.length
       ? summaries
@@ -208,18 +219,18 @@ export function createApp() {
 </html>`);
   });
 
-  // Jay intake page (unguessable token in path)
-  app.get(`/i/:token`, (req, res, next) => {
+  app.get(`/i/:token`, (req, res) => {
     if (!timingSafeEqualString(req.params.token, INTAKE_TOKEN)) {
-      return res.status(404).type('html').send('<!doctype html><title>Not found</title><p>Not found</p>');
+      return res
+        .status(404)
+        .type('html')
+        .send('<!doctype html><title>Not found</title><p>Not found</p>');
     }
     return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   });
 
-  // Do not auto-serve index.html at "/". Intake is only via /i/:token.
   app.use(express.static(PUBLIC_DIR, { index: false }));
 
-  // Block bare root — no public intake without token
   app.get('/', (_req, res) => {
     res
       .status(404)
