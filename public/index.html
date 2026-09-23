@@ -13,32 +13,48 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
-    <div class="page">
-      <header class="top">
+    <header class="site-header">
+      <div class="site-header-inner">
         <p class="brand">JAY GARRETT</p>
-        <h1>Electronic Press Kit Information</h1>
+        <p class="brand-sub">Electronic Press Kit Information</p>
+      </div>
+    </header>
+
+    <div class="page">
+      <section class="intro-panel">
         <p class="lede" id="intro-text">
           TAIG Promotions is building your professional Electronic Press Kit for
           radio, press, venues, promoters, and booking contacts. This form
           collects the remaining information and links we need. Answer what you
-          know. Optional items can be skipped. TAIG will review everything
-          before it is used publicly.
+          know. Optional items can be skipped. You can save your progress and
+          come back later. TAIG will review everything before it is used
+          publicly.
         </p>
         <div class="progress-wrap" aria-live="polite">
           <div class="progress-label">
             <span id="progress-text">Section 1 of 10</span>
             <span id="progress-pct">0%</span>
           </div>
-          <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div
+            class="progress-bar"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
             <div class="progress-fill" id="progress-fill"></div>
           </div>
         </div>
-      </header>
+        <div id="draft-banner" class="draft-banner" hidden></div>
+      </section>
 
       <main id="app" class="app"></main>
 
       <footer class="foot">
-        <p>Private intake for TAIG Promotions. Your answers are reviewed before any public use.</p>
+        <p>
+          Private intake for TAIG Promotions. Your answers are reviewed before
+          any public use.
+        </p>
       </footer>
     </div>
     <script src="/js/schema.js"></script>

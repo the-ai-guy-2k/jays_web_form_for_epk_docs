@@ -1,15 +1,18 @@
 :root {
-  --bg: #f7f5f0;
+  --bg: #f3efe6;
   --surface: #ffffff;
-  --ink: #1c1b19;
-  --muted: #5c574e;
-  --line: #d9d2c5;
+  --ink: #171512;
+  --muted: #5f584e;
+  --line: #ddd4c4;
+  --header: #171512;
   --accent: #1f4d36;
+  --gold: #b08d3a;
+  --gold-soft: #f4ead2;
   --accent-soft: #e7efe9;
   --danger: #8a1f1f;
   --optional: #6b655c;
-  --radius: 10px;
-  --shadow: 0 1px 2px rgba(28, 27, 25, 0.06);
+  --radius: 12px;
+  --shadow: 0 8px 24px rgba(23, 21, 18, 0.08);
   --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
   --font-display: "Source Serif 4", Georgia, serif;
 }
@@ -23,8 +26,8 @@ body {
   margin: 0;
   padding: 0;
   background:
-    radial-gradient(circle at top left, rgba(31, 77, 54, 0.06), transparent 40%),
-    linear-gradient(180deg, #fbfaf7 0%, var(--bg) 40%, #f3efe6 100%);
+    radial-gradient(ellipse at top, rgba(176, 141, 58, 0.12), transparent 42%),
+    linear-gradient(180deg, #faf7f0 0%, var(--bg) 55%, #ebe4d6 100%);
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.45;
@@ -35,35 +38,47 @@ body {
   min-height: 100vh;
 }
 
+.site-header {
+  background:
+    linear-gradient(180deg, #221f1a 0%, var(--header) 100%);
+  color: #f7f3ea;
+  border-bottom: 3px solid var(--gold);
+  padding: 1.35rem 1rem 1.2rem;
+}
+
+.site-header-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.brand-sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.98rem;
+  color: #d8c89a;
+  letter-spacing: 0.02em;
+}
+
 .page {
   max-width: 720px;
   margin: 0 auto;
   padding: 1rem 1rem 3rem;
 }
 
-.top {
-  padding: 0.75rem 0 1rem;
-}
-
-.brand {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 6vw, 2.35rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--accent);
-}
-
-.top h1 {
-  margin: 0.15rem 0 0.75rem;
-  font-family: var(--font-display);
-  font-size: clamp(1.15rem, 3.5vw, 1.45rem);
-  font-weight: 600;
-  color: var(--ink);
+.intro-panel {
+  margin-top: 1rem;
 }
 
 .lede {
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
   color: var(--muted);
   font-size: 1rem;
 }
@@ -72,7 +87,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 0.75rem 0.9rem;
+  padding: 0.85rem 0.95rem;
   box-shadow: var(--shadow);
 }
 
@@ -81,13 +96,13 @@ body {
   justify-content: space-between;
   gap: 1rem;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.45rem;
 }
 
 .progress-bar {
-  height: 8px;
-  background: #ebe6db;
+  height: 9px;
+  background: #ebe4d6;
   border-radius: 999px;
   overflow: hidden;
 }
@@ -95,8 +110,34 @@ body {
 .progress-fill {
   height: 100%;
   width: 0%;
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--accent), #2f6b4b);
   transition: width 0.2s ease;
+}
+
+.draft-banner {
+  margin-top: 0.85rem;
+  background: var(--gold-soft);
+  border: 1px solid #e0cfa0;
+  border-left: 4px solid var(--gold);
+  border-radius: 8px;
+  padding: 0.85rem 0.95rem;
+  color: #3d3420;
+  font-size: 0.94rem;
+}
+
+.draft-banner a {
+  color: var(--accent);
+  word-break: break-all;
+}
+
+.draft-banner .resume-box {
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #e0cfa0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.82rem;
 }
 
 .app {
@@ -107,14 +148,14 @@ body {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 2px);
-  padding: 1.1rem 1rem 1.25rem;
+  padding: 1.2rem 1.05rem 1.3rem;
   box-shadow: var(--shadow);
 }
 
 .section-title {
   margin: 0 0 0.35rem;
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.4rem;
 }
 
 .section-help {
@@ -129,7 +170,7 @@ body {
 
 .field label {
   display: block;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.35rem;
   font-size: 0.98rem;
 }
@@ -197,8 +238,8 @@ textarea.short {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid rgba(31, 77, 54, 0.35);
-  border-color: var(--accent);
+  outline: 2px solid rgba(176, 141, 58, 0.45);
+  border-color: var(--gold);
 }
 
 .choice-row {
@@ -257,6 +298,19 @@ textarea:focus {
   color: #fff;
 }
 
+.btn-primary:hover {
+  background: #183d2b;
+}
+
+.btn-gold {
+  background: var(--gold);
+  color: #171512;
+}
+
+.btn-gold:hover {
+  background: #9a792f;
+}
+
 .btn-secondary {
   background: #fff;
   border-color: #bdb5a6;
@@ -280,16 +334,27 @@ textarea:focus {
   gap: 0.65rem;
   flex-wrap: wrap;
   margin-top: 1.25rem;
+  align-items: center;
 }
 
 .nav .spacer {
   flex: 1;
+  min-width: 0.5rem;
 }
 
 .error-box {
   background: #f8eaea;
   border: 1px solid #e2b6b6;
   color: var(--danger);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.success-box {
+  background: var(--accent-soft);
+  border: 1px solid #b7d0c1;
+  color: #1f3d2c;
   border-radius: 8px;
   padding: 0.75rem 0.85rem;
   margin-bottom: 1rem;
@@ -338,10 +403,6 @@ textarea:focus {
   font-style: italic;
 }
 
-.success {
-  text-align: left;
-}
-
 .success h2 {
   font-family: var(--font-display);
   margin-top: 0;
@@ -361,13 +422,47 @@ textarea:focus {
   font-size: 0.85rem;
 }
 
+.splash {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background:
+    linear-gradient(180deg, #171512 0%, #241f18 45%, #1a1713 100%);
+  color: #f7f3ea;
+}
+
+.splash-inner {
+  max-width: 28rem;
+  text-align: center;
+  border-top: 3px solid var(--gold);
+  padding-top: 1.5rem;
+}
+
+.splash .brand {
+  color: #fff;
+}
+
+.splash h1 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #d8c89a;
+  margin: 0.35rem 0 1rem;
+}
+
+.splash p:last-child {
+  color: #cfc6b4;
+  margin: 0;
+}
+
 @media (min-width: 720px) {
   .page {
-    padding-top: 1.75rem;
+    padding-top: 1.5rem;
   }
 
   .card {
-    padding: 1.4rem 1.35rem 1.5rem;
+    padding: 1.45rem 1.4rem 1.55rem;
   }
 
   .choice-row.horizontal {

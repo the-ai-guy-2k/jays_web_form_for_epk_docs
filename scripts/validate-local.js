@@ -215,6 +215,104 @@ const app = createApp();
   } else fail('05/06. Validation', `status=${res.status}`);
 }
 
+{
+  const partial = {
+    intakeToken: INTAKE_TOKEN,
+    currentStep: 1,
+    sections: {
+      artist: {
+        artistName: 'Jay Garrett',
+        homeMarket: 'Jacksonville, Florida',
+        genre: 'Country',
+        genreDetail: '',
+        oneLineDescription: 'Draft one-liner',
+        officialWebsite: '',
+      },
+    },
+  };
+  const save = await request(app, 'POST', '/api/draft', {
+    headers: { 'Content-Type': 'application/json' },
+    body: partial,
+  });
+  if (
+    save.status === 200 &&
+    save.json?.status === 'draft' &&
+    save.json?.resumeToken &&
+    save.json?.message &&
+    !String(save.json.message).toLowerCase().includes('received your electronic')
+  ) {
+    pass('11-draft. Partial draft saves with resume token', save.json.resumeToken);
+  } else {
+    fail('11-draft. Draft save', JSON.stringify(save.json));
+  }
+
+  const resumeToken = save.json?.resumeToken;
+  const loaded = await request(
+    app,
+    'GET',
+    `/api/draft/${encodeURIComponent(resumeToken)}?token=${encodeURIComponent(INTAKE_TOKEN)}`
+  );
+  if (
+    loaded.status === 200 &&
+    loaded.json?.status === 'draft' &&
+    loaded.json?.sections?.artist?.homeMarket === 'Jacksonville, Florida' &&
+    loaded.json?.sections?.artist?.oneLineDescription === 'Draft one-liner'
+  ) {
+    pass('14-15-draft. Draft reopen restores saved values');
+  } else {
+    fail('14-15-draft. Draft reopen', JSON.stringify(loaded.json));
+  }
+
+  // Update draft then convert to submitted
+  const full = samplePayload();
+  full.resumeToken = resumeToken;
+  full.sections.artist.oneLineDescription = 'Draft one-liner continued';
+  const submittedFromDraft = await request(app, 'POST', '/api/submit', {
+    headers: { 'Content-Type': 'application/json' },
+    body: full,
+  });
+  if (
+    submittedFromDraft.status === 201 &&
+    submittedFromDraft.json?.status === 'submitted'
+  ) {
+    pass('17-draft. Submit after resume converts draft to submitted');
+  } else {
+    fail('17-draft. Submit from draft', JSON.stringify(submittedFromDraft.json));
+  }
+
+  const after = await request(
+    app,
+    'GET',
+    `/api/draft/${encodeURIComponent(resumeToken)}?token=${encodeURIComponent(INTAKE_TOKEN)}`
+  );
+  if (after.status === 409) {
+    pass('23. Draft save path no longer editable after submit');
+  } else {
+    fail('23. Draft after submit', `status=${after.status}`);
+  }
+
+  const drafts = await request(
+    app,
+    'GET',
+    `/api/taig/submissions?token=${encodeURIComponent(TAIG_REVIEW_TOKEN)}&status=draft`
+  );
+  const submittedOnly = await request(
+    app,
+    'GET',
+    `/api/taig/submissions?token=${encodeURIComponent(TAIG_REVIEW_TOKEN)}&status=submitted`
+  );
+  if (
+    drafts.status === 200 &&
+    submittedOnly.status === 200 &&
+    Array.isArray(drafts.json?.submissions) &&
+    submittedOnly.json?.submissions?.some((s) => s.status === 'submitted')
+  ) {
+    pass('20. Draft vs submitted distinguishable in TAIG list');
+  } else {
+    fail('20. Status distinction');
+  }
+}
+
 let submissionId = null;
 let submittedAt = null;
 {
@@ -291,8 +389,14 @@ let submittedAt = null;
 
 {
   const res = await request(app, 'GET', '/');
-  if (res.status === 404) pass('13b. Root does not expose intake');
-  else fail('13b. Root exposure', `status=${res.status}`);
+  if (
+    res.status === 200 &&
+    res.text.includes('JAY GARRETT') &&
+    !res.text.includes('section-form') &&
+    !res.text.includes('Submit Intake')
+  ) {
+    pass('13b. Root splash does not expose intake form');
+  } else fail('13b. Root exposure', `status=${res.status}`);
 }
 
 {
@@ -355,16 +459,23 @@ let submittedAt = null;
     appJs.includes('btn-back') &&
     appJs.includes('btn-next') &&
     appJs.includes('collectCurrentSection') &&
-    appJs.includes('renderReview')
+    appJs.includes('renderReview') &&
+    appJs.includes('saveDraft') &&
+    appJs.includes('btn-save')
   ) {
-    pass('03. Next/Back/progress/retain implemented in client');
-  } else fail('03. Navigation retention');
+    pass('03. Next/Back/progress/retain + Save Progress implemented');
+  } else fail('03. Navigation retention / save');
 }
 
 {
   const css = fs.readFileSync(path.join(root, 'public', 'css', 'styles.css'), 'utf8');
-  if (css.includes('min-height: 48px') && css.includes('max-width: 720px')) {
-    pass('18. Mobile-first layout CSS present');
+  if (
+    css.includes('min-height: 48px') &&
+    css.includes('max-width: 720px') &&
+    css.includes('site-header') &&
+    css.includes('--gold')
+  ) {
+    pass('18. Mobile-first polished UI CSS present');
   } else fail('18. Mobile CSS');
 }
 

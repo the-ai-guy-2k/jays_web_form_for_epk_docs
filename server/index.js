@@ -8,10 +8,12 @@ import {
   TAIG_REVIEW_TOKEN,
 } from './config.js';
 import {
+  getByResumeToken,
   getSubmissionById,
   insertSubmission,
   listSubmissionSummaries,
   storageKind,
+  upsertDraft,
 } from './db.js';
 import { validateSubmission } from './validation.js';
 
@@ -44,6 +46,18 @@ function requireTaigToken(req, res, next) {
   return next();
 }
 
+function requireIntakeToken(req) {
+  const token =
+    req.body?.intakeToken ||
+    req.query.token ||
+    req.get('x-intake-token');
+  return timingSafeEqualString(token, INTAKE_TOKEN);
+}
+
+function makeResumeToken() {
+  return crypto.randomBytes(24).toString('base64url');
+}
+
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
@@ -57,9 +71,30 @@ export function createApp() {
     });
   });
 
+  // Operator-facing splash (no form; no secrets)
+  app.get('/', (_req, res) => {
+    res.type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jay Garrett — EPK Intake</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="splash">
+    <div class="splash-inner">
+      <p class="brand">JAY GARRETT</p>
+      <h1>Electronic Press Kit Information</h1>
+      <p>This intake is private. Open the secure link provided by TAIG Promotions to continue.</p>
+    </div>
+  </div>
+</body>
+</html>`);
+  });
+
   app.get('/api/bootstrap', (req, res) => {
-    const token = req.query.token || req.get('x-intake-token');
-    if (!timingSafeEqualString(token, INTAKE_TOKEN)) {
+    if (!requireIntakeToken(req)) {
       return res.status(401).json({ error: 'Invalid intake link.' });
     }
     return res.json({
@@ -83,9 +118,77 @@ export function createApp() {
     });
   });
 
+  // Save draft progress (not a final submission)
+  app.post('/api/draft', async (req, res) => {
+    if (!requireIntakeToken(req)) {
+      return res.status(401).json({ error: 'Invalid intake link.' });
+    }
+    const sections = req.body?.sections;
+    if (!sections || typeof sections !== 'object') {
+      return res.status(400).json({ error: 'Nothing to save yet.' });
+    }
+    const currentStep = Number(req.body?.currentStep || 0);
+    let resumeToken = String(req.body?.resumeToken || '').trim() || null;
+
+    try {
+      if (!resumeToken) resumeToken = makeResumeToken();
+      const id = crypto.randomUUID();
+      const saved = await upsertDraft({
+        id,
+        resumeToken,
+        sectionData: sections,
+        currentStep,
+      });
+      const resumePath = `/i/${INTAKE_TOKEN}?draft=${encodeURIComponent(saved.resumeToken)}`;
+      return res.status(200).json({
+        ok: true,
+        status: 'draft',
+        resumeToken: saved.resumeToken,
+        updatedAt: saved.updatedAt,
+        currentStep: saved.currentStep,
+        resumePath,
+        message:
+          'Progress saved. Keep your resume link so you can come back and finish later. This is not your final submission.',
+      });
+    } catch (err) {
+      if (err.code === 'ALREADY_SUBMITTED') {
+        return res.status(409).json({
+          error: 'This draft was already submitted and can no longer be edited.',
+        });
+      }
+      console.error('[draft] save failure');
+      return res.status(500).json({
+        error: 'Could not save progress right now. Please try again.',
+      });
+    }
+  });
+
+  app.get('/api/draft/:resumeToken', async (req, res) => {
+    if (!requireIntakeToken(req)) {
+      return res.status(401).json({ error: 'Invalid intake link.' });
+    }
+    const draft = await getByResumeToken(req.params.resumeToken);
+    if (!draft) {
+      return res.status(404).json({ error: 'Saved progress not found.' });
+    }
+    if (draft.status !== 'draft') {
+      return res.status(409).json({
+        error: 'This intake was already submitted.',
+        status: draft.status,
+        submissionId: draft.id,
+      });
+    }
+    return res.json({
+      status: draft.status,
+      resumeToken: draft.resumeToken,
+      currentStep: draft.currentStep,
+      updatedAt: draft.updatedAt,
+      sections: draft.sectionData,
+    });
+  });
+
   app.post('/api/submit', async (req, res) => {
-    const token = req.body?.intakeToken || req.get('x-intake-token');
-    if (!timingSafeEqualString(token, INTAKE_TOKEN)) {
+    if (!requireIntakeToken(req)) {
       return res.status(401).json({ error: 'Invalid intake link.' });
     }
 
@@ -100,12 +203,14 @@ export function createApp() {
 
     const submittedAt = new Date().toISOString();
     const id = crypto.randomUUID();
+    const resumeToken = String(req.body?.resumeToken || '').trim() || null;
     try {
       const saved = await insertSubmission({
         id,
         artistName: result.artistName,
         sectionData: req.body.sections,
         submittedAt,
+        resumeToken,
       });
       return res.status(201).json({
         ok: true,
@@ -125,8 +230,11 @@ export function createApp() {
     }
   });
 
-  app.get('/api/taig/submissions', requireTaigToken, async (_req, res) => {
-    const submissions = await listSubmissionSummaries();
+  app.get('/api/taig/submissions', requireTaigToken, async (req, res) => {
+    const status = req.query.status || undefined;
+    const submissions = await listSubmissionSummaries(
+      status ? { status } : {}
+    );
     return res.json({
       formVersion: FORM_VERSION,
       submissions,
@@ -151,7 +259,7 @@ export function createApp() {
       }
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="jay-epk-submission-${submission.id}.json"`
+        `attachment; filename="jay-epk-${submission.status}-${submission.id}.json"`
       );
       return res.json(submission);
     }
@@ -167,7 +275,10 @@ export function createApp() {
           '<!doctype html><html><body style="font-family:system-ui;padding:2rem"><h1>Unauthorized</h1><p>A valid review token is required.</p></body></html>'
         );
     }
-    const summaries = await listSubmissionSummaries();
+    const filter = req.query.status || '';
+    const summaries = await listSubmissionSummaries(
+      filter ? { status: filter } : {}
+    );
     const selectedId = req.query.id || (summaries[0] && summaries[0].id);
     const selected = selectedId ? await getSubmissionById(selectedId) : null;
 
@@ -175,17 +286,18 @@ export function createApp() {
       ? summaries
           .map(
             (s) =>
-              `<li><a href="/taig/review?token=${encodeURIComponent(token)}&id=${encodeURIComponent(s.id)}">${escapeHtml(s.id)}</a> — ${escapeHtml(s.submittedAt)} — ${escapeHtml(s.status)}</li>`
+              `<li><a href="/taig/review?token=${encodeURIComponent(token)}&id=${encodeURIComponent(s.id)}">${escapeHtml(s.id)}</a> — <strong>${escapeHtml(s.status)}</strong> — ${escapeHtml(s.submittedAt || s.updatedAt || '')}</li>`
           )
           .join('')
-      : '<li>No submissions yet.</li>';
+      : '<li>No records yet.</li>';
 
-    let detailHtml = '<p>Select a submission.</p>';
+    let detailHtml = '<p>Select a record.</p>';
     if (selected) {
       detailHtml = `
         <p><strong>ID:</strong> ${escapeHtml(selected.id)}<br>
-        <strong>Submitted:</strong> ${escapeHtml(selected.submittedAt)}<br>
-        <strong>Status:</strong> ${escapeHtml(selected.status)} (not validated)<br>
+        <strong>Status:</strong> ${escapeHtml(selected.status)}${selected.status === 'submitted' ? ' (not validated)' : ' (in progress — not final)'}<br>
+        <strong>Updated:</strong> ${escapeHtml(selected.updatedAt || '')}<br>
+        <strong>Submitted:</strong> ${escapeHtml(selected.submittedAt || '—')}<br>
         <strong>Form version:</strong> ${escapeHtml(selected.formVersion)}<br>
         <strong>Artist:</strong> ${escapeHtml(selected.artistName)}</p>
         <p><a href="/api/taig/submissions/${encodeURIComponent(selected.id)}/export.json?token=${encodeURIComponent(token)}">Download JSON export</a></p>
@@ -205,12 +317,17 @@ export function createApp() {
     h1{font-size:1.5rem;margin:0 0 .5rem}
     ul{padding-left:1.2rem}
     a{color:#1a4d2e}
+    .filters a{margin-right:1rem}
   </style>
 </head>
 <body>
 <main>
-  <h1>Intake submissions</h1>
-  <p>Review only. Submissions stay as submitted until TAIG validates them separately.</p>
+  <h1>Intake records</h1>
+  <p class="filters">
+    <a href="/taig/review?token=${encodeURIComponent(token)}">All</a>
+    <a href="/taig/review?token=${encodeURIComponent(token)}&status=submitted">Submitted only</a>
+    <a href="/taig/review?token=${encodeURIComponent(token)}&status=draft">Drafts only</a>
+  </p>
   <ul>${listHtml}</ul>
   <hr />
   ${detailHtml}
@@ -230,13 +347,6 @@ export function createApp() {
   });
 
   app.use(express.static(PUBLIC_DIR, { index: false }));
-
-  app.get('/', (_req, res) => {
-    res
-      .status(404)
-      .type('html')
-      .send('<!doctype html><title>Not found</title><p>Not found</p>');
-  });
 
   return app;
 }

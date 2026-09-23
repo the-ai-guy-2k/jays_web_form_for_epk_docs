@@ -4,6 +4,7 @@
   const progressPct = document.getElementById('progress-pct');
   const progressFill = document.getElementById('progress-fill');
   const progressBar = document.querySelector('.progress-bar');
+  const draftBanner = document.getElementById('draft-banner');
 
   const sections = window.EPK_SCHEMA.sections;
   const TOTAL_STEPS = sections.length + 1; // + review
@@ -14,14 +15,42 @@
     data: {},
     errors: {},
     submitting: false,
+    saving: false,
     result: null,
     intakeToken: '',
+    resumeToken: '',
   };
 
   function intakeTokenFromPath() {
     const parts = location.pathname.split('/').filter(Boolean);
     if (parts[0] === 'i' && parts[1]) return parts[1];
     return '';
+  }
+
+  function draftTokenFromQuery() {
+    return new URLSearchParams(location.search).get('draft') || '';
+  }
+
+  function showDraftBanner(html, { hidden = false } = {}) {
+    if (!draftBanner) return;
+    if (hidden) {
+      draftBanner.hidden = true;
+      draftBanner.innerHTML = '';
+      return;
+    }
+    draftBanner.hidden = false;
+    draftBanner.innerHTML = html;
+  }
+
+  function mergeLoadedSections(saved) {
+    if (!saved || typeof saved !== 'object') return;
+    for (const section of sections) {
+      if (!saved[section.id]) continue;
+      state.data[section.id] = {
+        ...state.data[section.id],
+        ...saved[section.id],
+      };
+    }
   }
 
   function emptyForType(type, field) {
@@ -521,9 +550,11 @@
       <h2 class="section-title">${escapeHtml(section.title)}</h2>
       <p class="section-help">${escapeHtml(section.help || '')}</p>
       ${context}
+      <div id="section-flash"></div>
       <form id="section-form" novalidate>${fieldsHtml}
         <div class="nav">
           <button type="button" class="btn btn-secondary" id="btn-back" ${isFirst ? 'disabled' : ''}>Back</button>
+          <button type="button" class="btn btn-gold" id="btn-save">Save Progress</button>
           <span class="spacer"></span>
           <button type="submit" class="btn btn-primary" id="btn-next">${isLast ? 'Review' : 'Next'}</button>
         </div>
@@ -581,11 +612,12 @@
 
     appEl.innerHTML = `<section class="card">
       <h2 class="section-title">Review</h2>
-      <p class="section-help">Check your answers before submitting. You can go back and edit any section.</p>
+      <p class="section-help">Check your answers before submitting. You can go back and edit any section. Saving progress here does not submit.</p>
       <div id="review-errors"></div>
       ${blocks}
       <div class="nav">
         <button type="button" class="btn btn-secondary" id="btn-back">Back</button>
+        <button type="button" class="btn btn-gold" id="btn-save">Save Progress</button>
         <span class="spacer"></span>
         <button type="button" class="btn btn-primary" id="btn-submit">Submit Intake</button>
       </div>
@@ -596,6 +628,7 @@
       state.step = sections.length - 1;
       render();
     };
+    document.getElementById('btn-save').onclick = () => saveDraft();
     document.getElementById('btn-submit').onclick = submitAll;
     appEl.querySelectorAll('[data-edit]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -639,6 +672,10 @@
       state.errors = {};
       state.step = Math.max(0, state.step - 1);
       render();
+    };
+    document.getElementById('btn-save').onclick = () => {
+      collectCurrentSection();
+      saveDraft();
     };
 
     appEl.querySelectorAll('[data-add]').forEach((btn) => {
@@ -685,6 +722,68 @@
     });
   }
 
+  async function saveDraft() {
+    if (state.saving || state.result) return;
+    state.saving = true;
+    const saveBtn = document.getElementById('btn-save');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+    }
+    try {
+      const res = await fetch('/api/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intakeToken: state.intakeToken,
+          resumeToken: state.resumeToken || undefined,
+          currentStep: state.step,
+          sections: state.data,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        const flash =
+          document.getElementById('section-flash') ||
+          document.getElementById('review-errors');
+        if (flash) {
+          flash.innerHTML = `<div class="error-box">${escapeHtml(body.error || 'Could not save.')}</div>`;
+        }
+        return;
+      }
+      state.resumeToken = body.resumeToken;
+      const resumeUrl = `${location.origin}${body.resumePath}`;
+      const url = new URL(location.href);
+      url.searchParams.set('draft', body.resumeToken);
+      history.replaceState({}, '', url.toString());
+      showDraftBanner(
+        `<strong>Progress saved</strong> — this is not your final submission.<br>
+         Bookmark or copy your resume link so you can come back later:
+         <div class="resume-box"><a href="${escapeHtml(resumeUrl)}">${escapeHtml(resumeUrl)}</a></div>`
+      );
+      const flash =
+        document.getElementById('section-flash') ||
+        document.getElementById('review-errors');
+      if (flash) {
+        flash.innerHTML = `<div class="success-box">${escapeHtml(body.message)}</div>`;
+      }
+    } catch {
+      const flash =
+        document.getElementById('section-flash') ||
+        document.getElementById('review-errors');
+      if (flash) {
+        flash.innerHTML =
+          '<div class="error-box">Could not reach the server to save. Please try again.</div>';
+      }
+    } finally {
+      state.saving = false;
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Progress';
+      }
+    }
+  }
+
   async function submitAll() {
     if (state.submitting) return;
     // Re-validate all sections client-side
@@ -708,6 +807,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           intakeToken: state.intakeToken,
+          resumeToken: state.resumeToken || undefined,
           formVersion: window.EPK_SCHEMA.formVersion,
           sections: state.data,
         }),
@@ -731,6 +831,7 @@
       }
       state.result = body;
       state.submitting = false;
+      showDraftBanner('', { hidden: true });
       renderSuccess();
     } catch (err) {
       const box = document.getElementById('review-errors');
@@ -773,7 +874,6 @@
       if (!res.ok) throw new Error('bad token');
       const body = await res.json();
       state.known = body.known || {};
-      // Apply known prefills where schema already has defaults; ensure consistency
       if (state.known.artistName) {
         state.data.artist.artistName = state.known.artistName;
       }
@@ -795,6 +895,39 @@
         '<section class="card"><p>This intake link is not valid.</p></section>';
       return;
     }
+
+    const draftToken = draftTokenFromQuery();
+    if (draftToken) {
+      try {
+        const dres = await fetch(
+          `/api/draft/${encodeURIComponent(draftToken)}?token=${encodeURIComponent(state.intakeToken)}`
+        );
+        const dbody = await dres.json();
+        if (dres.ok) {
+          state.resumeToken = dbody.resumeToken;
+          mergeLoadedSections(dbody.sections);
+          state.step = Math.min(
+            Number(dbody.currentStep || 0),
+            sections.length
+          );
+          showDraftBanner(
+            `<strong>Welcome back.</strong> Your saved answers were restored. Continue where you left off, or save again anytime.`
+          );
+        } else if (dres.status === 409) {
+          appEl.innerHTML = `<section class="card"><p>${escapeHtml(dbody.error || 'Already submitted.')}</p></section>`;
+          return;
+        } else {
+          showDraftBanner(
+            `Could not load that saved link. You can still fill out a new form and save progress.`
+          );
+        }
+      } catch {
+        showDraftBanner(
+          `Could not load saved progress right now. You can still continue with a new form.`
+        );
+      }
+    }
+
     render();
   }
 

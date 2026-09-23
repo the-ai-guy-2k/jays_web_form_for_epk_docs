@@ -8,9 +8,10 @@ This is an **intake form**, not the public EPK website.
 
 1. TAIG sends Jay one private URL  
 2. Jay completes a 10-section mobile-friendly form  
-3. Jay reviews answers and submits  
-4. Answers are stored locally as structured **submitted** data  
-5. TAIG retrieves and reviews before any public use  
+3. Jay can **Save Progress** and return later via a resume link  
+4. Jay reviews answers and submits  
+5. Answers are stored locally as structured **submitted** data  
+6. TAIG retrieves and reviews before any public use  
 
 ## Requirements
 
