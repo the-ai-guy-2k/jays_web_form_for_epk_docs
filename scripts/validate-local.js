@@ -515,6 +515,22 @@ let submittedAt = null;
   } else fail('16. Failure handling');
 }
 
+
+{
+  const appJs = fs.readFileSync(path.join(root, 'public', 'js', 'app.js'), 'utf8');
+  const submitStart = appJs.indexOf('async function submitAll()');
+  const submitEnd = appJs.indexOf('\n  function render()', submitStart);
+  const submitHandler = appJs.slice(submitStart, submitEnd);
+  const invalidPath = submitHandler.indexOf('if (!validateSection(i))');
+  const formTransition = submitHandler.indexOf("state.view = 'form'", invalidPath);
+  const rerender = submitHandler.indexOf('render()', invalidPath);
+  if (invalidPath >= 0 && formTransition > invalidPath && rerender > formTransition) {
+    pass('SUBMIT. Missing fields return to the first invalid section');
+  } else {
+    fail('SUBMIT. Missing fields remain on Review without feedback');
+  }
+}
+
 const failed = results.filter((r) => r.status === 'FAIL');
 console.log('\n--- SUMMARY ---');
 console.log(`PASS: ${results.filter((r) => r.status === 'PASS').length}`);

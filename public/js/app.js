@@ -905,8 +905,13 @@
     // Re-validate all sections client-side
     for (let i = 0; i < sections.length; i++) {
       if (!validateSection(i)) {
+        state.view = 'form';
         state.step = i;
         render();
+        const firstErr = appEl.querySelector('.has-error');
+        if (firstErr) {
+          firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         return;
       }
     }
@@ -936,6 +941,7 @@
               body.error ||
               'Submission failed.'
           )}</div>`;
+          box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         state.submitting = false;
         if (btn) {
@@ -954,6 +960,7 @@
       if (box) {
         box.innerHTML =
           '<div class="error-box">We could not reach the server. Please try again. Nothing was published.</div>';
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       state.submitting = false;
       if (btn) {
