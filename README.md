@@ -43,6 +43,7 @@ After `npm start` (default port 3000):
 | Role | URL |
 |------|-----|
 | Public Web EPK | `http://localhost:3000/` |
+| Manage EPK (coming soon, V2 placeholder) | `http://localhost:3000/manage` |
 | Intake (preserved) | `http://localhost:3000/intake` |
 | TAIG review | `http://localhost:3000/taig/review?token=<TAIG_REVIEW_TOKEN>` |
 | JSON list (protected) | `http://localhost:3000/api/taig/submissions?token=<TAIG_REVIEW_TOKEN>` |

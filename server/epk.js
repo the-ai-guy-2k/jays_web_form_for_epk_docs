@@ -260,12 +260,58 @@ export function renderEpkPage(content) {
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="wrap">
-      <p>&copy; ${new Date().getFullYear()} ${esc(artist.name)}. All rights reserved.</p>
-      ${contact?.representation ? `<p>Presented by ${esc(contact.representation)}.</p>` : ''}
+  ${renderFooter(artist, contact)}
+</body>
+</html>`;
+}
+
+function renderFooter(artist, contact, { onManage = false } = {}) {
+  return `<footer class="footer">
+    <div class="wrap footer-inner">
+      <div>
+        <p>&copy; ${new Date().getFullYear()} ${esc(artist.name)}. All rights reserved.</p>
+        ${contact?.representation ? `<p>Presented by ${esc(contact.representation)}.</p>` : ''}
+      </div>
+      <p class="footer-manage"><a href="/manage"${onManage ? ' aria-current="page"' : ''}>Manage EPK</a></p>
     </div>
-  </footer>
+  </footer>`;
+}
+
+export function renderManagePage(content) {
+  const { artist, album, contact } = content;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EPK Management — Coming Soon | ${esc(artist.name)}</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#1b1310" />
+  <link rel="stylesheet" href="/epk/epk.css" />
+</head>
+<body class="epk">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/">${esc(artist.name)}<span class="brand-sub">Electronic Press Kit</span></a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero manage-hero" aria-labelledby="manage-title">
+      <div class="wrap wrap-narrow manage-inner">
+        <p class="eyebrow">${esc(artist.name)} EPK Management</p>
+        <h1 id="manage-title">Coming soon</h1>
+        <p class="manage-lead">A secure management experience is being developed so that authorized members of ${esc(artist.name)}'s team can keep this EPK's content up to date.</p>
+        <p class="manage-note">Until then, the public EPK for <em>${esc(album.title)}</em> remains the current, approved press destination.</p>
+        <div class="hero-actions">
+          <a class="btn" href="/">Return to EPK</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  ${renderFooter(artist, contact, { onManage: true })}
 </body>
 </html>`;
 }

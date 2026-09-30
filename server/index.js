@@ -14,7 +14,7 @@ import {
   storageKind,
   upsertDraft,
 } from './db.js';
-import { loadEpkContent, renderEpkPage } from './epk.js';
+import { loadEpkContent, renderEpkPage, renderManagePage } from './epk.js';
 import { validateSubmission } from './validation.js';
 
 function timingSafeEqualString(a, b) {
@@ -63,20 +63,29 @@ export function createApp() {
     });
   });
 
-  const epkHtml = renderEpkPage(loadEpkContent());
+  const epkContent = loadEpkContent();
+  const epkHtml = renderEpkPage(epkContent);
+  const manageHtml = renderManagePage(epkContent);
+  const publicPageHeaders = {
+    'Content-Security-Policy':
+      "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  };
 
   app.get('/', (req, res) => {
     // Resume links issued before V1 pointed at /?draft=<token>.
     if (typeof req.query.draft === 'string' && req.query.draft) {
       return res.redirect(302, `/intake?draft=${encodeURIComponent(req.query.draft)}`);
     }
-    res.set({
-      'Content-Security-Policy':
-        "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-    });
+    res.set(publicPageHeaders);
     return res.type('html').send(epkHtml);
+  });
+
+  // V1 placeholder only; the future managed-EPK (V2) entry point.
+  app.get('/manage', (_req, res) => {
+    res.set({ ...publicPageHeaders, 'X-Robots-Tag': 'noindex, nofollow' });
+    return res.type('html').send(manageHtml);
   });
 
   app.get('/intake', (_req, res) => {

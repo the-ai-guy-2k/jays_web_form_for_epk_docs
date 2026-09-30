@@ -711,6 +711,57 @@ a:hover {
   margin: 0.25rem 0;
 }
 
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.footer-manage a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+}
+
+.footer-manage a:hover {
+  color: var(--ink);
+  text-decoration-color: var(--amber);
+}
+
+/* Manage placeholder */
+.manage-hero {
+  min-height: calc(100vh - 60px - 7rem);
+  display: flex;
+  align-items: center;
+}
+
+.manage-inner h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(2.6rem, 10vw, 4.5rem);
+  line-height: 1.05;
+}
+
+.manage-lead {
+  margin: 1.25rem 0 0;
+  font-family: var(--serif);
+  font-size: clamp(1.15rem, 3.5vw, 1.4rem);
+  color: var(--ink);
+}
+
+.manage-note {
+  margin: 1rem 0 0;
+  color: var(--ink-soft);
+}
+
 /* Print one-sheet */
 @media print {
   body.epk {
@@ -723,6 +774,7 @@ a:hover {
   .skip-link,
   .hero-actions,
   .js-print,
+  .footer-manage,
   .note,
   .btn {
     display: none !important;

@@ -789,6 +789,68 @@ const hrefs = [...html.matchAll(/href="(https:[^"]+)"/g)].map((m) => decode(m[1]
   }
 }
 
+// --- ACI-009 Manage EPK placeholder checks ---
+{
+  const footer = html.match(/<footer class="footer">([\s\S]*?)<\/footer>/)?.[1] || '';
+  const nav = html.match(/<nav id="site-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+  const hero = html.match(/<section id="top"[\s\S]*?<\/section>/)?.[0] || '';
+  if (
+    footer.includes('<a href="/manage">Manage EPK</a>') &&
+    !nav.includes('/manage') &&
+    !hero.includes('/manage') &&
+    (html.match(/href="\/manage"/g) || []).length === 1
+  ) {
+    pass('MANAGE-ENTRY. Secondary "Manage EPK" link in EPK footer only');
+  } else fail('MANAGE-ENTRY. Manage entry point placement');
+}
+
+const manageRes = await request(app, 'GET', '/manage');
+const manageHtml = manageRes.text;
+{
+  if (
+    manageRes.status === 200 &&
+    manageHtml.includes('<h1 id="manage-title">Coming soon</h1>') &&
+    manageHtml.includes('Jay Garrett EPK Management') &&
+    manageHtml.includes('/epk/epk.css') &&
+    manageRes.headers.get('x-robots-tag')?.includes('noindex') &&
+    (manageRes.headers.get('content-security-policy') || '').includes("default-src 'self'")
+  ) {
+    pass('MANAGE-PAGE. /manage renders branded Coming Soon page (noindex, CSP)');
+  } else fail('MANAGE-PAGE. /manage page', `status=${manageRes.status}`);
+}
+
+{
+  const back = manageHtml.includes('<a class="btn" href="/">Return to EPK</a>');
+  const home = await request(app, 'GET', '/');
+  if (back && home.status === 200 && home.text.includes('<h1 id="hero-title">Jay Garrett</h1>')) {
+    pass('MANAGE-RETURN. Return to EPK routes to / which serves the EPK');
+  } else fail('MANAGE-RETURN. Return link');
+}
+
+{
+  const forbidden = [/<form/i, /<input/i, /<textarea/i, /<select/i, /password/i, /log ?in/i, /sign ?in/i, /<script/i, /\/api\//i, /%/, /contentVersion/, /featuredTracks/];
+  const hits = forbidden.filter((re) => re.test(manageHtml));
+  const writes = await Promise.all(
+    ['POST', 'PUT', 'PATCH', 'DELETE'].map((m) =>
+      request(app, m, '/manage', { headers: { 'Content-Type': 'application/json' }, body: { artist: { name: 'x' } } })
+    )
+  );
+  const accepted = writes.filter((w) => w.status < 400);
+  const after = await request(app, 'GET', '/');
+  if (!hits.length && !accepted.length && after.text === html) {
+    pass('MANAGE-SCOPE. No forms, credentials, scripts, data exposure, or write methods; EPK unchanged');
+  } else fail('MANAGE-SCOPE. Scope boundary', `${hits.map(String).join(', ')} accepted=${accepted.length}`);
+}
+
+{
+  if (
+    (TAIG_REVIEW_TOKEN ? !manageHtml.includes(TAIG_REVIEW_TOKEN) : true) &&
+    !/DATABASE|TOKEN|submission|resume|draft/i.test(manageHtml)
+  ) {
+    pass('MANAGE-PRIVACY. No secrets or intake/admin data on /manage');
+  } else fail('MANAGE-PRIVACY. /manage leaks');
+}
+
 const failed = results.filter((r) => r.status === 'FAIL');
 console.log('\n--- SUMMARY ---');
 console.log(`PASS: ${results.filter((r) => r.status === 'PASS').length}`);
