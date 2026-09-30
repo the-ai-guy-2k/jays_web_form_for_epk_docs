@@ -1,0 +1,80 @@
+{
+  "contentVersion": "jay-epk-v1",
+  "source": {
+    "artifact": "GVCA-ACICE — Jay Garrett Web EPK V1",
+    "approvedBy": "Jay Garrett (dataset reviewed and approved)",
+    "date": "2026-09-30"
+  },
+  "artist": {
+    "name": "Jay Garrett",
+    "band": "Jay Garrett Band",
+    "region": "Jacksonville / Northeast Florida",
+    "genre": "Country",
+    "roles": ["Singer", "Songwriter", "Guitarist"]
+  },
+  "album": {
+    "title": "Still Chasing the Sundown",
+    "releaseDate": "2026-10-19",
+    "releaseDateDisplay": "October 19, 2026",
+    "trackCount": 12,
+    "producedAndEngineeredBy": "Scott Harter",
+    "productionLocation": "Nashville, Tennessee",
+    "songwriting": "All songs written or co-written by Jay Garrett.",
+    "artwork": {
+      "src": "/epk/img/still-chasing-the-sundown-cover.jpg",
+      "alt": "Still Chasing the Sundown album cover: Jay Garrett leaning against a weathered wooden porch wall holding an electric guitar, with the title Jay Garrett Band, Still Chasing the Sundown",
+      "width": 1170,
+      "height": 1154,
+      "downloadable": true
+    },
+    "tracks": [
+      "Something We Can Stomp To",
+      "Same Old Lame Old",
+      "Karma Catching Up",
+      "Dann Run",
+      "Sippin' on a Sangria",
+      "Let Me Be Strong",
+      "Sure Got You",
+      "Why My Horse?",
+      "Her Hidden Powers",
+      "The Way You Carry Yourself",
+      "As You Derail",
+      "(You'll Find Me) Down by the River"
+    ],
+    "featuredTracks": ["Karma Catching Up", "Something We Can Stomp To"]
+  },
+  "bio": [
+    "Jay Garrett is a Jacksonville-area singer, songwriter and guitarist with a catalog released under both his own name and Jay Garrett Band. His solo releases include Broken in Four, Strange and Daytona Bound, while Jay Garrett Band released The Nashville Sessions in 2019 and Weighed Down, For Way Too Long in 2022.",
+    "Jay's Northeast Florida music history reaches back to at least the late 2000s, with Jacksonville-area event records and documented live performances. More recently, he continued releasing new music with the 2025 singles \"Same Old Lame Old\" and \"Sippin' on a Sangria.\"",
+    "His next project, Still Chasing the Sundown, is a 12-song country album planned for release on October 19, 2026. The album was produced and engineered by Scott Harter in Nashville, Tennessee, with all songs written or co-written by Jay Garrett."
+  ],
+  "listen": [
+    {
+      "group": "Jay Garrett",
+      "links": [
+        { "platform": "Spotify", "url": "https://open.spotify.com/artist/5YOopHdU7HYWvT6dZV137W" },
+        { "platform": "Apple Music", "url": "https://music.apple.com/us/artist/jay-garrett/3978898" }
+      ]
+    },
+    {
+      "group": "Jay Garrett Band",
+      "links": [
+        { "platform": "Spotify", "url": "https://open.spotify.com/artist/3bcSjBtwGPuUwsrqmopdah" },
+        { "platform": "Apple Music", "url": "https://music.apple.com/us/artist/jay-garrett-band/1473713956" },
+        { "platform": "Amazon Music", "url": "https://music.amazon.com/artists/B07VH6Z93K/jay-garrett-band" },
+        { "platform": "YouTube", "url": "https://www.youtube.com/channel/UCf_pTuQJN5m7HDy82lryEeQ/about" }
+      ]
+    }
+  ],
+  "social": [
+    { "label": "Official website", "url": "https://www.jaygarrettmusic.com/" },
+    { "label": "Facebook", "url": "https://www.facebook.com/jay.garrett.167/" }
+  ],
+  "contact": {
+    "representation": "TAIG Promotions",
+    "email": null,
+    "phone": null,
+    "website": "https://www.jaygarrettmusic.com/"
+  },
+  "photos": []
+}

@@ -31,7 +31,7 @@ function fail(id, detail = '') {
   console.error(`FAIL  ${id}${detail ? ' — ' + detail : ''}`);
 }
 
-async function request(app, method, url, { headers = {}, body } = {}) {
+async function request(app, method, url, { headers = {}, body, redirect = 'follow' } = {}) {
   const server = app.listen(0);
   await new Promise((r) => server.once('listening', r));
   const { port } = server.address();
@@ -40,6 +40,7 @@ async function request(app, method, url, { headers = {}, body } = {}) {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      redirect,
     });
     const text = await res.text();
     let json = null;
@@ -48,7 +49,13 @@ async function request(app, method, url, { headers = {}, body } = {}) {
     } catch {
       /* html or empty */
     }
-    return { status: res.status, text, json };
+    return {
+      status: res.status,
+      text,
+      json,
+      location: res.headers.get('location'),
+      headers: res.headers,
+    };
   } finally {
     await new Promise((r) => server.close(r));
   }
@@ -162,12 +169,12 @@ function samplePayload() {
 getDb();
 const app = createApp();
 
-// 01 direct entry loads
+// 01 direct entry loads (ACI-008: intake moved from / to /intake; / is the public EPK)
 {
-  const res = await request(app, 'GET', '/');
+  const res = await request(app, 'GET', '/intake');
   if (res.status === 200 && res.text.includes('JAY GARRETT') && res.text.includes('cartman.svg')) {
-    pass('01. Root loads themed intake');
-  } else fail('01. Root loads themed intake', `status=${res.status}`);
+    pass('01. /intake loads themed intake');
+  } else fail('01. /intake loads themed intake', `status=${res.status}`);
 }
 
 {
@@ -240,9 +247,19 @@ const app = createApp();
   }
 
   const resumeToken = save.json?.resumeToken;
-  if (save.json?.resumePath === `/?draft=${encodeURIComponent(resumeToken)}`) {
-    pass('11b-draft. Resume link returns to root');
-  } else fail('11b-draft. Resume link', 'Expected a root draft URL');
+  if (save.json?.resumePath === `/intake?draft=${encodeURIComponent(resumeToken)}`) {
+    pass('11b-draft. Resume link returns to /intake');
+  } else fail('11b-draft. Resume link', 'Expected an /intake draft URL');
+
+  const legacy = await request(app, 'GET', `/?draft=${encodeURIComponent(resumeToken)}`, {
+    redirect: 'manual',
+  });
+  if (
+    legacy.status === 302 &&
+    legacy.location === `/intake?draft=${encodeURIComponent(resumeToken)}`
+  ) {
+    pass('11c-draft. Legacy /?draft= resume links redirect to /intake');
+  } else fail('11c-draft. Legacy resume redirect', `status=${legacy.status} location=${legacy.location}`);
   const loaded = await request(
     app,
     'GET',
@@ -383,26 +400,267 @@ let submittedAt = null;
   } else fail('14/15. Governance review UI');
 }
 
+// 13b (ACI-008: intake shell now lives at /intake instead of /)
 {
-  const res = await request(app, 'GET', '/');
+  const res = await request(app, 'GET', '/intake');
   if (
     res.status === 200 &&
     res.text.includes('Section 1 of 10') &&
     res.text.includes('/js/app.js') &&
-    !res.text.includes('Open the secure link')
+    !res.text.includes('Open the secure link') &&
+    res.headers.get('x-robots-tag')?.includes('noindex')
   ) {
-    pass('13b. Root serves intake shell without private-link splash');
-  } else fail('13b. Root intake', `status=${res.status}`);
+    pass('13b. /intake serves intake shell (noindex) without private-link splash');
+  } else fail('13b. /intake intake shell', `status=${res.status}`);
 }
 
 {
-  const res = await request(app, 'GET', '/');
-  if (
-    !res.text.includes(TAIG_REVIEW_TOKEN) &&
-    !res.text.includes('DATABASE_PATH')
-  ) {
-    pass('17. No secrets exposed in intake HTML');
+  const pages = await Promise.all(['/', '/intake'].map((u) => request(app, 'GET', u)));
+  const leaks = pages.filter(
+    (res) =>
+      (TAIG_REVIEW_TOKEN && res.text.includes(TAIG_REVIEW_TOKEN)) ||
+      res.text.includes('DATABASE_PATH') ||
+      res.text.includes('DATABASE_URL') ||
+      res.text.includes('TAIG_REVIEW_TOKEN')
+  );
+  if (!leaks.length) {
+    pass('17. No secrets exposed in EPK or intake HTML');
   } else fail('17. Secrets exposed');
+}
+
+// --- ACI-008 Public Web EPK checks ---
+const epk = JSON.parse(
+  fs.readFileSync(path.join(root, 'content', 'jay-garrett-epk.json'), 'utf8')
+);
+const epkRes = await request(app, 'GET', '/');
+const html = epkRes.text;
+const decode = (s) =>
+  s
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+const text = decode(html);
+
+{
+  if (
+    epkRes.status === 200 &&
+    html.includes('Electronic Press Kit') &&
+    html.includes('/epk/epk.css') &&
+    !html.includes('/js/app.js') &&
+    !html.includes('Section 1 of 10') &&
+    !html.includes('Save Progress')
+  ) {
+    pass('EPK-02/03. Root loads the Web EPK, not the intake');
+  } else fail('EPK-02/03. Root is EPK', `status=${epkRes.status}`);
+}
+
+{
+  if (
+    text.includes('<h1 id="hero-title">Jay Garrett</h1>') &&
+    text.includes('Jay Garrett Band') &&
+    text.includes('Jacksonville / Northeast Florida') &&
+    text.includes('Country') &&
+    text.includes('Singer · Songwriter · Guitarist')
+  ) {
+    pass('EPK-04. Artist identity correct');
+  } else fail('EPK-04. Artist identity');
+}
+
+{
+  if (
+    text.includes('Still Chasing the Sundown') &&
+    text.includes('October 19, 2026') &&
+    html.includes('datetime="2026-10-19"') &&
+    text.includes('Scott Harter') &&
+    text.includes('Nashville, Tennessee') &&
+    text.includes('All songs written or co-written by Jay Garrett.')
+  ) {
+    pass('EPK-05/06. Album title, release date and credits correct');
+  } else fail('EPK-05/06. Album facts');
+}
+
+{
+  const approved = [
+    'Something We Can Stomp To',
+    'Same Old Lame Old',
+    'Karma Catching Up',
+    'Dann Run',
+    "Sippin' on a Sangria",
+    'Let Me Be Strong',
+    'Sure Got You',
+    'Why My Horse?',
+    'Her Hidden Powers',
+    'The Way You Carry Yourself',
+    'As You Derail',
+    "(You'll Find Me) Down by the River",
+  ];
+  const listMatch = html.match(/<ol class="tracklist">([\s\S]*?)<\/ol>/);
+  const rendered = listMatch
+    ? [...listMatch[1].matchAll(/<span class="track-title">([\s\S]*?)<\/span>/g)].map((m) => decode(m[1]))
+    : [];
+  if (
+    rendered.length === 12 &&
+    approved.every((t, i) => rendered[i] === t) &&
+    JSON.stringify(epk.album.tracks) === JSON.stringify(approved)
+  ) {
+    pass('EPK-07. 12-track list correct and in order');
+  } else fail('EPK-07. Track list', JSON.stringify(rendered));
+}
+
+{
+  const cards = [...html.matchAll(/<h3 class="feature-title">([\s\S]*?)<\/h3>/g)].map((m) => decode(m[1]));
+  const badges = (html.match(/class="track is-featured"/g) || []).length;
+  if (
+    cards.length === 2 &&
+    cards.includes('Karma Catching Up') &&
+    cards.includes('Something We Can Stomp To') &&
+    badges === 2
+  ) {
+    pass('EPK-08. Featured tracks correct');
+  } else fail('EPK-08. Featured tracks', JSON.stringify(cards));
+}
+
+{
+  const approvedBio = [
+    'Jay Garrett is a Jacksonville-area singer, songwriter and guitarist with a catalog released under both his own name and Jay Garrett Band. His solo releases include Broken in Four, Strange and Daytona Bound, while Jay Garrett Band released The Nashville Sessions in 2019 and Weighed Down, For Way Too Long in 2022.',
+    'Jay\'s Northeast Florida music history reaches back to at least the late 2000s, with Jacksonville-area event records and documented live performances. More recently, he continued releasing new music with the 2025 singles "Same Old Lame Old" and "Sippin\' on a Sangria."',
+    'His next project, Still Chasing the Sundown, is a 12-song country album planned for release on October 19, 2026. The album was produced and engineered by Scott Harter in Nashville, Tennessee, with all songs written or co-written by Jay Garrett.',
+  ];
+  if (approvedBio.every((p) => text.includes(`<p>${p}</p>`))) {
+    pass('EPK-09. Approved GVCA bio rendered verbatim');
+  } else fail('EPK-09. Bio mismatch');
+}
+
+const hrefs = [...html.matchAll(/href="(https:[^"]+)"/g)].map((m) => decode(m[1]));
+{
+  const expected = {
+    'Spotify — Jay Garrett': 'https://open.spotify.com/artist/5YOopHdU7HYWvT6dZV137W',
+    'Spotify — Jay Garrett Band': 'https://open.spotify.com/artist/3bcSjBtwGPuUwsrqmopdah',
+    'Apple Music — Jay Garrett': 'https://music.apple.com/us/artist/jay-garrett/3978898',
+    'Apple Music — Jay Garrett Band': 'https://music.apple.com/us/artist/jay-garrett-band/1473713956',
+    'Amazon Music — Jay Garrett Band': 'https://music.amazon.com/artists/B07VH6Z93K/jay-garrett-band',
+    'YouTube — Jay Garrett Band': 'https://www.youtube.com/channel/UCf_pTuQJN5m7HDy82lryEeQ/about',
+  };
+  const mapped = {};
+  for (const g of epk.listen) {
+    for (const l of g.links) mapped[`${l.platform} — ${g.group}`] = l.url;
+  }
+  const missing = Object.entries(expected).filter(
+    ([k, url]) => mapped[k] !== url || !hrefs.includes(url)
+  );
+  if (!missing.length && Object.keys(mapped).length === 6) {
+    pass('EPK-10. Streaming links present and correctly mapped');
+  } else fail('EPK-10. Streaming links', JSON.stringify(missing));
+}
+
+{
+  const socialOk =
+    hrefs.includes('https://www.jaygarrettmusic.com/') &&
+    hrefs.includes('https://www.facebook.com/jay.garrett.167/');
+  const approvedHosts = new Set([
+    'open.spotify.com',
+    'music.apple.com',
+    'music.amazon.com',
+    'www.youtube.com',
+    'www.facebook.com',
+    'www.jaygarrettmusic.com',
+  ]);
+  const unapproved = hrefs.filter((h) => !approvedHosts.has(new URL(h).hostname));
+  if (socialOk && !unapproved.length) {
+    pass('EPK-11. Social/website links mapped; no unapproved accounts');
+  } else fail('EPK-11. Social links', JSON.stringify(unapproved));
+}
+
+{
+  const externals = [...html.matchAll(/<a [^>]*target="_blank"[^>]*>/g)].map((m) => m[0]);
+  if (externals.length && externals.every((a) => a.includes('rel="noopener noreferrer"'))) {
+    pass('EPK-EXT. External links open safely in a new tab');
+  } else fail('EPK-EXT. External link attributes');
+}
+
+{
+  const banned = [
+    /award/i,
+    /grammy/i,
+    /billboard/i,
+    /\bstreams\b/i,
+    /monthly listeners/i,
+    /testimonial/i,
+    /chart-topping/i,
+    /cartman/i,
+    /resume/i,
+    /submission/i,
+    /\/taig\//i,
+    /\/api\//i,
+  ];
+  const hits = banned.filter((re) => re.test(html));
+  if (!hits.length) {
+    pass('EPK-TRUTH. No fabricated claims, intake/admin references, or API links on EPK');
+  } else fail('EPK-TRUTH. Forbidden content', hits.map(String).join(', '));
+}
+
+{
+  const imgs = [...html.matchAll(/<img [^>]*>/g)].map((m) => m[0]);
+  const missingAlt = imgs.filter((i) => !/alt="[^"]+"/.test(i));
+  if (
+    html.includes('<a class="skip-link" href="#main">') &&
+    html.includes('aria-controls="site-nav"') &&
+    html.includes('lang="en"') &&
+    !missingAlt.length &&
+    (html.match(/<h1[\s>]/g) || []).length === 1
+  ) {
+    pass('EPK-A11Y. Skip link, labelled nav toggle, single h1, image alt text');
+  } else fail('EPK-A11Y. Accessibility basics');
+}
+
+{
+  const css = await request(app, 'GET', '/epk/epk.css');
+  const js = await request(app, 'GET', '/epk/epk.js');
+  const assets = [...html.matchAll(/(?:src|href)="(\/[^"#]+)"/g)].map((m) => m[1]);
+  const statuses = await Promise.all(assets.map((a) => request(app, 'GET', a)));
+  const broken = assets.filter((_, i) => statuses[i].status !== 200);
+  if (css.status === 200 && js.status === 200 && !broken.length) {
+    pass('EPK-ASSETS. All local EPK assets resolve (no broken media)', `${assets.length} assets`);
+  } else fail('EPK-ASSETS. Broken local assets', broken.join(', '));
+}
+
+{
+  const { renderEpkPage } = await import('../server/epk.js');
+  const stripped = { ...epk, album: { ...epk.album, artwork: null }, photos: [] };
+  const fallback = renderEpkPage(stripped);
+  if (
+    fallback.includes('class="cover-fallback"') &&
+    !fallback.includes('<img') &&
+    !fallback.includes('Download album artwork') &&
+    !fallback.includes('id="photos"')
+  ) {
+    pass('EPK-21. Missing artwork/photos degrade gracefully');
+  } else fail('EPK-21. Missing asset handling');
+}
+
+{
+  const csp = epkRes.headers.get('content-security-policy') || '';
+  if (csp.includes("default-src 'self'") && epkRes.headers.get('x-content-type-options') === 'nosniff') {
+    pass('EPK-HEADERS. CSP and nosniff set on public EPK');
+  } else fail('EPK-HEADERS. Security headers');
+}
+
+{
+  const probes = [
+    '/api/taig/submissions',
+    '/taig/review',
+    '/content/jay-garrett-epk.json',
+    '/data/submissions.sqlite',
+    '/.env',
+    '/server/config.js',
+  ];
+  const results = await Promise.all(probes.map((p) => request(app, 'GET', p)));
+  const exposed = probes.filter((_, i) => results[i].status === 200);
+  if (!exposed.length) {
+    pass('EPK-14/15. Private/admin/raw data routes not publicly reachable');
+  } else fail('EPK-14/15. Exposed routes', exposed.join(', '));
 }
 
 {

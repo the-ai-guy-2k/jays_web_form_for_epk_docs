@@ -1,12 +1,20 @@
-# Jay Garrett — Electronic Press Kit Intake (MVP)
+# Jay Garrett — Public Web EPK V1 (+ preserved EPK intake)
 
-Local intake application for **TAIG Promotions** to collect EPK information from Jay Garrett.
+On this branch (`feature/jay-web-epk-v1`) the root URL `/` is Jay Garrett's **public, read-only Web EPK**,
+built from Jay-approved Current Truth (GVCA-ACICE — Jay Garrett Web EPK V1).
 
-This is an **intake form**, not the public EPK website.
+The original intake application is preserved at `/intake` (unlinked, `noindex`).
 
-## What it does
+## Public Web EPK
 
-1. Jay opens the base URL directly to Section 1
+- Content: `content/jay-garrett-epk.json` (structured artist data — edit here, not in templates)
+- Renderer: `server/epk.js` (server-side HTML, no client framework)
+- Assets: `public/epk/` (`epk.css`, `epk.js`, `img/`)
+- Missing optional assets (artwork, photos) are omitted gracefully.
+
+## Intake: what it does
+
+1. Jay opens `/intake` directly to Section 1
 2. Jay completes a 10-section mobile-friendly form  
 3. Jay can **Save Progress** and return later via a resume link  
 4. Jay reviews answers and submits  
@@ -34,12 +42,13 @@ After `npm start` (default port 3000):
 
 | Role | URL |
 |------|-----|
-| Jay intake | `http://localhost:3000/` |
+| Public Web EPK | `http://localhost:3000/` |
+| Intake (preserved) | `http://localhost:3000/intake` |
 | TAIG review | `http://localhost:3000/taig/review?token=<TAIG_REVIEW_TOKEN>` |
 | JSON list (protected) | `http://localhost:3000/api/taig/submissions?token=<TAIG_REVIEW_TOKEN>` |
 | JSON export | `http://localhost:3000/api/taig/submissions/<id>/export.json?token=<TAIG_REVIEW_TOKEN>` |
 
-Root `/` opens the intake directly. Saved drafts have unguessable resume links at `/?draft=<resumeToken>`.
+Saved drafts have unguessable resume links at `/intake?draft=<resumeToken>`. Older `/?draft=<resumeToken>` links redirect there.
 
 ## Form version
 
@@ -76,7 +85,9 @@ Or start + validate in one flow by running the validation script (it will use th
 ## Project layout
 
 ```
-server/          Express API + SQLite
+content/         Structured public EPK data (Jay-approved)
+server/          Express API + SQLite + EPK renderer
+public/epk/      Public EPK styles, script, images
 public/          Mobile-first intake UI
 scripts/         Local validation
 docs/nebula/     Engineering documentation
@@ -85,7 +96,8 @@ data/            Local SQLite (gitignored)
 
 ## Branch
 
-Development: `feature/aci-001`
+- `feature/jay-web-epk-v1` — public Web EPK V1 (this branch)
+- `feature/aci-001` — intake-only lineage (preserved, currently deployed)
 
 ## Replit
 
@@ -95,7 +107,7 @@ Published Replit filesystems are not durable. Set `DATABASE_URL` (Replit SQL) fo
 
 ## Out of scope
 
-- Public EPK site
+- EPK content editor / CMS (V2)
 - Replit deployment (separate ACI)
 - CRM / booking / marketing automation
 - Direct file uploads

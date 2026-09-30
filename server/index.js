@@ -14,6 +14,7 @@ import {
   storageKind,
   upsertDraft,
 } from './db.js';
+import { loadEpkContent, renderEpkPage } from './epk.js';
 import { validateSubmission } from './validation.js';
 
 function timingSafeEqualString(a, b) {
@@ -62,7 +63,24 @@ export function createApp() {
     });
   });
 
-  app.get('/', (_req, res) => {
+  const epkHtml = renderEpkPage(loadEpkContent());
+
+  app.get('/', (req, res) => {
+    // Resume links issued before V1 pointed at /?draft=<token>.
+    if (typeof req.query.draft === 'string' && req.query.draft) {
+      return res.redirect(302, `/intake?draft=${encodeURIComponent(req.query.draft)}`);
+    }
+    res.set({
+      'Content-Security-Policy':
+        "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    });
+    return res.type('html').send(epkHtml);
+  });
+
+  app.get('/intake', (_req, res) => {
+    res.set('X-Robots-Tag', 'noindex, nofollow');
     res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   });
 
@@ -106,7 +124,7 @@ export function createApp() {
         sectionData: sections,
         currentStep,
       });
-      const resumePath = `/?draft=${encodeURIComponent(saved.resumeToken)}`;
+      const resumePath = `/intake?draft=${encodeURIComponent(saved.resumeToken)}`;
       return res.status(200).json({
         ok: true,
         status: 'draft',
