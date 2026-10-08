@@ -250,6 +250,11 @@ a:hover {
   display: grid;
   gap: 2.5rem;
   align-items: center;
+  min-width: 0;
+}
+
+.hero-copy {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -325,13 +330,16 @@ a:hover {
 }
 
 .hero-cover {
-  max-width: 460px;
+  max-width: min(460px, 100%);
   width: 100%;
+  min-width: 0;
   justify-self: center;
 }
 
 .cover-img {
   width: 100%;
+  max-width: 100%;
+  height: auto;
   border-radius: var(--radius);
   box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--line);
 }

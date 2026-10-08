@@ -8,6 +8,7 @@
 | 2026-10-08 | ACI-012 — featured-track players + password-protected WAV downloads (Git LFS for masters) |
 | 2026-10-08 | ACI-014 — repair featured audio template syntax in `server/epk.js` |
 | 2026-10-08 | ACI-017 — replace Jay Garrett album cover with Operator-supplied PNG |
+| 2026-10-08 | ACI-018 — fix narrow-mobile album cover clipping (hero grid `min-width: 0`) |
 
 Form version at build: `epk-intake-v1`
 

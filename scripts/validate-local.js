@@ -630,6 +630,10 @@ const hrefs = [...html.matchAll(/href="(https:[^"]+)"/g)].map((m) => decode(m[1]
   if (css.status === 200 && js.status === 200 && !broken.length) {
     pass('EPK-ASSETS. All local EPK assets resolve (no broken media)', `${assets.length} assets`);
   } else fail('EPK-ASSETS. Broken local assets', broken.join(', '));
+
+  if (/\.hero-cover\s*\{[^}]*min-width:\s*0/.test(css.text || '')) {
+    pass('EPK-COVER-NARROW. Hero cover can shrink in the grid (no intrinsic min-content clip)');
+  } else fail('EPK-COVER-NARROW. .hero-cover must allow shrinking (min-width: 0)');
 }
 
 {
