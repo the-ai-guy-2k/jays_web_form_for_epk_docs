@@ -89,7 +89,7 @@ export function renderEpkPage(content) {
       const playback = audio && safeUrl(audio.playbackSrc);
       const trackId = audio?.id ? String(audio.id) : '';
       const player = playback
-        ? `<audio class="epk-player" controls preload="metadata" controlslist="nodownload noplaybackrate" src="${esc(playback)}" data-track-id="${esc(trackId)}"></audio>`
+        ? `<audio class="epk-player" controls preload="metadata" controlslist="nodownload noplaybackrate" src="${esc(playback)}" data-track-id="${esc(trackId)}"></audio>
           <button type="button" class="btn btn-ghost js-download" data-track-id="${esc(trackId)}" data-track-title="${esc(title)}">Download</button>`
         : '';
       return `<li class="feature-card">
