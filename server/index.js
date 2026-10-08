@@ -6,6 +6,8 @@ import {
   PUBLIC_DIR,
   TAIG_REVIEW_TOKEN,
 } from './config.js';
+import { handleEpkDownload } from './epk-audio.js';
+import { timingSafeEqualString } from './timing-safe.js';
 import {
   getByResumeToken,
   getSubmissionById,
@@ -16,13 +18,6 @@ import {
 } from './db.js';
 import { loadEpkContent, renderEpkPage, renderManagePage } from './epk.js';
 import { validateSubmission } from './validation.js';
-
-function timingSafeEqualString(a, b) {
-  const left = Buffer.from(String(a || ''), 'utf8');
-  const right = Buffer.from(String(b || ''), 'utf8');
-  if (left.length !== right.length) return false;
-  return crypto.timingSafeEqual(left, right);
-}
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -54,6 +49,12 @@ export function createApp() {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '2mb' }));
+
+  app.post('/api/epk/download', handleEpkDownload);
+  app.all('/api/epk/download', (_req, res) => {
+    res.set('Allow', 'POST');
+    return res.status(405).json({ error: 'Use POST to request a download.' });
+  });
 
   app.get('/health', (_req, res) => {
     res.json({
@@ -322,6 +323,10 @@ export function createApp() {
 </main>
 </body>
 </html>`);
+  });
+
+  app.use(['/media', '/private'], (_req, res) => {
+    res.status(404).type('text').send('Not found');
   });
 
   app.use(express.static(PUBLIC_DIR, { index: false }));

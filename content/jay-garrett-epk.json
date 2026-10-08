@@ -41,7 +41,19 @@
       "As You Derail",
       "(You'll Find Me) Down by the River"
     ],
-    "featuredTracks": ["Karma Catching Up", "Something We Can Stomp To"]
+    "featuredTracks": ["Karma Catching Up", "Something We Can Stomp To"],
+    "featuredAudio": [
+      {
+        "id": "karma-catching-up",
+        "title": "Karma Catching Up",
+        "playbackSrc": "/epk/audio/jay-garrett-karma-catching-up.mp3"
+      },
+      {
+        "id": "something-we-can-stomp-to",
+        "title": "Something We Can Stomp To",
+        "playbackSrc": "/epk/audio/jay-garrett-something-we-can-stomp-to.mp3"
+      }
+    ]
   },
   "bio": [
     "Jay Garrett is a Jacksonville-area singer, songwriter and guitarist with a catalog released under both his own name and Jay Garrett Band. His solo releases include Broken in Four, Strange and Daytona Bound, while Jay Garrett Band released The Nashville Sessions in 2019 and Weighed Down, For Way Too Long in 2022.",

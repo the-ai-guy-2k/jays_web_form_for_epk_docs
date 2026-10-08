@@ -500,12 +500,19 @@ a:hover {
 
 .feature-card {
   display: flex;
-  gap: 1.25rem;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 1.1rem;
   padding: 1.5rem;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  min-width: 0;
+}
+
+.feature-head {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
 }
 
 .feature-num {
@@ -536,6 +543,80 @@ a:hover {
 .feature-meta {
   margin: 0;
   color: var(--ink-soft);
+}
+
+.epk-player {
+  width: 100%;
+  max-width: 100%;
+  height: 44px;
+  accent-color: var(--amber);
+}
+
+.feature-card .js-download {
+  align-self: flex-start;
+}
+
+.download-dialog {
+  width: min(92vw, 28rem);
+  max-width: 100%;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.download-dialog::backdrop {
+  background: rgba(12, 8, 6, 0.72);
+}
+
+.download-dialog h2 {
+  margin: 0 0 0.6rem;
+  font-family: var(--serif);
+  font-size: 1.6rem;
+}
+
+.download-dialog p {
+  margin: 0 0 1rem;
+  color: var(--ink-soft);
+}
+
+.download-track-name {
+  font-weight: 700;
+  color: var(--ink) !important;
+}
+
+.download-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 0.4rem;
+}
+
+.download-field input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.download-error {
+  color: #f0b4a8 !important;
+  font-weight: 600;
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
 }
 
 /* Track list */
@@ -776,7 +857,10 @@ a:hover {
   .js-print,
   .footer-manage,
   .note,
-  .btn {
+  .btn,
+  .epk-player,
+  .js-download,
+  .download-dialog {
     display: none !important;
   }
 

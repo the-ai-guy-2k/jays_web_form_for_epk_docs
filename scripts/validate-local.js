@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,14 +11,17 @@ const validationDb = path.join(dataDir, 'validation-submissions.sqlite');
 fs.mkdirSync(dataDir, { recursive: true });
 if (fs.existsSync(validationDb)) fs.unlinkSync(validationDb);
 process.env.DATABASE_PATH = validationDb;
+process.env.EPK_DOWNLOAD_PASSWORD = `validate-${crypto.randomBytes(12).toString('hex')}`;
 
 // Load modules only after DATABASE_PATH is set
 const { createApp } = await import('../server/index.js');
 const {
   TAIG_REVIEW_TOKEN,
   DATABASE_PATH,
+  EPK_DOWNLOAD_PASSWORD,
 } = await import('../server/config.js');
 const { getDb } = await import('../server/db.js');
+const { resetDownloadThrottle } = await import('../server/epk-audio.js');
 
 const results = [];
 
@@ -42,17 +46,19 @@ async function request(app, method, url, { headers = {}, body, redirect = 'follo
       body: body ? JSON.stringify(body) : undefined,
       redirect,
     });
-    const text = await res.text();
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = buffer.toString('utf8');
     let json = null;
     try {
       json = JSON.parse(text);
     } catch {
-      /* html or empty */
+      /* html, binary, or empty */
     }
     return {
       status: res.status,
       text,
       json,
+      buffer,
       location: res.headers.get('location'),
       headers: res.headers,
     };
@@ -655,6 +661,8 @@ const hrefs = [...html.matchAll(/href="(https:[^"]+)"/g)].map((m) => decode(m[1]
     '/data/submissions.sqlite',
     '/.env',
     '/server/config.js',
+    '/media/masters/03Karma%20Catching%20Up%20MSTR%2024bit_48hz.wav',
+    '/media/masters/01Stomp%20to%20MIX%20MSTR%2024bit_48hz.wav',
   ];
   const results = await Promise.all(probes.map((p) => request(app, 'GET', p)));
   const exposed = probes.filter((_, i) => results[i].status === 200);
@@ -849,6 +857,158 @@ const manageHtml = manageRes.text;
   ) {
     pass('MANAGE-PRIVACY. No secrets or intake/admin data on /manage');
   } else fail('MANAGE-PRIVACY. /manage leaks');
+}
+
+// --- ACI-012 featured audio + protected download ---
+const audioJs = fs.readFileSync(path.join(root, 'public', 'epk', 'epk.js'), 'utf8');
+{
+  const karmaPlayer = html.includes('src="/epk/audio/jay-garrett-karma-catching-up.mp3"');
+  const stompPlayer = html.includes('src="/epk/audio/jay-garrett-something-we-can-stomp-to.mp3"');
+  const noAutoplay = !html.includes('autoplay');
+  const exclusive = audioJs.includes('other.pause()');
+  if (karmaPlayer && stompPlayer && noAutoplay && exclusive) {
+    pass('AUDIO-PLAYER. Featured players present, no autoplay, one-at-a-time pause');
+  } else fail('AUDIO-PLAYER. Featured player markup');
+}
+
+{
+  if (
+    html.includes('id="download-dialog"') &&
+    html.includes('<label for="download-password">Password</label>') &&
+    html.includes('js-download-cancel') &&
+    html.includes('Download featured track') &&
+    !html.includes('/api/epk/download')
+  ) {
+    pass('AUDIO-UI. Password dialog is labeled, closable, and does not expose the download endpoint in HTML');
+  } else fail('AUDIO-UI. Download dialog');
+}
+
+{
+  const css = fs.readFileSync(path.join(root, 'public', 'epk', 'epk.css'), 'utf8');
+  if (css.includes('.epk-player') && css.includes('.download-dialog') && css.includes('.js-download')) {
+    pass('AUDIO-PRINT. Player and download UI hidden in print stylesheet');
+  } else fail('AUDIO-PRINT. Print CSS');
+}
+
+{
+  const mp3Karma = await request(app, 'GET', '/epk/audio/jay-garrett-karma-catching-up.mp3');
+  const mp3Stomp = await request(app, 'GET', '/epk/audio/jay-garrett-something-we-can-stomp-to.mp3');
+  if (mp3Karma.status === 200 && mp3Stomp.status === 200 && mp3Karma.buffer.length > 1000 && mp3Stomp.buffer.length > 1000) {
+    pass('AUDIO-PLAYBACK. Public MP3 playback files resolve', `${mp3Karma.buffer.length} / ${mp3Stomp.buffer.length} bytes`);
+  } else fail('AUDIO-PLAYBACK. MP3 assets');
+}
+
+{
+  const sources = [
+    path.join(root, 'content', 'jay-garrett-epk.json'),
+    path.join(root, 'public', 'epk', 'epk.js'),
+    path.join(root, 'server', 'epk.js'),
+  ];
+  const leaked = sources.filter((file) => fs.readFileSync(file, 'utf8').includes(EPK_DOWNLOAD_PASSWORD));
+  if (
+    !html.includes(EPK_DOWNLOAD_PASSWORD) &&
+    !audioJs.includes(EPK_DOWNLOAD_PASSWORD) &&
+    !leaked.length
+  ) {
+    pass('AUDIO-SECRET. Download password absent from HTML, JS, and artist JSON');
+  } else fail('AUDIO-SECRET. Password leaked into client-visible source');
+}
+
+{
+  const blank = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: 'karma-catching-up', password: '' },
+  });
+  const wrong = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: 'karma-catching-up', password: 'definitely-wrong' },
+  });
+  if (blank.status === 401 && wrong.status === 401 && wrong.json?.error === 'Incorrect download password.') {
+    pass('AUDIO-AUTH-FAIL. Blank and wrong passwords are rejected');
+  } else fail('AUDIO-AUTH-FAIL. Unexpected auth failure response');
+}
+
+{
+  resetDownloadThrottle();
+  const badId = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: 'not-a-track', password: EPK_DOWNLOAD_PASSWORD },
+  });
+  const traversal = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: '../server/config.js', password: EPK_DOWNLOAD_PASSWORD },
+  });
+  const encoded = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: '..%2Fserver%2Fconfig.js', password: EPK_DOWNLOAD_PASSWORD },
+  });
+  const filename = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      trackId: 'karma-catching-up',
+      password: 'nope',
+      filename: '01Stomp to MIX MSTR 24bit_48hz.wav',
+    },
+  });
+  if (
+    badId.status === 400 &&
+    traversal.status === 400 &&
+    encoded.status === 400 &&
+    filename.status === 401
+  ) {
+    pass('AUDIO-PATH. Unsupported IDs, traversal, and client filenames cannot select files');
+  } else fail('AUDIO-PATH. File-selection controls');
+}
+
+{
+  resetDownloadThrottle();
+  const karma = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: 'karma-catching-up', password: EPK_DOWNLOAD_PASSWORD },
+  });
+  const stomp = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: 'something-we-can-stomp-to', password: EPK_DOWNLOAD_PASSWORD },
+  });
+  const karmaOk =
+    karma.status === 200 &&
+    karma.headers.get('content-disposition')?.includes('Jay-Garrett-Karma-Catching-Up.wav') &&
+    karma.buffer.length === 77377074 &&
+    karma.buffer.slice(0, 4).toString() === 'RIFF';
+  const stompOk =
+    stomp.status === 200 &&
+    stomp.headers.get('content-disposition')?.includes('Jay-Garrett-Something-We-Can-Stomp-To.wav') &&
+    stomp.buffer.length === 59968382 &&
+    stomp.buffer.slice(0, 4).toString() === 'RIFF';
+  if (karmaOk && stompOk) {
+    pass('AUDIO-AUTH-OK. Correct password returns the approved WAV masters');
+  } else {
+    fail(
+      'AUDIO-AUTH-OK. Download payload',
+      `karma=${karma.status}/${karma.buffer?.length} stomp=${stomp.status}/${stomp.buffer?.length}`
+    );
+  }
+}
+
+{
+  resetDownloadThrottle();
+  let last;
+  for (let i = 0; i < 6; i += 1) {
+    last = await request(app, 'POST', '/api/epk/download', {
+      headers: { 'Content-Type': 'application/json' },
+      body: { trackId: 'karma-catching-up', password: 'wrong' },
+    });
+  }
+  if (last.status === 429) {
+    pass('AUDIO-THROTTLE. Repeated failures are rate-limited');
+  } else fail('AUDIO-THROTTLE. Expected 429 after repeated failures', `status=${last.status}`);
+  resetDownloadThrottle();
+}
+
+{
+  const method = await request(app, 'GET', '/api/epk/download');
+  if (method.status === 405) pass('AUDIO-METHOD. GET download endpoint is not allowed');
+  else fail('AUDIO-METHOD. GET should be 405', `status=${method.status}`);
 }
 
 const failed = results.filter((r) => r.status === 'FAIL');

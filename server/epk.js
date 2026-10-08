@@ -79,16 +79,29 @@ export function renderEpkPage(content) {
     })
     .join('');
 
+  const featuredAudioByTitle = new Map(
+    (album.featuredAudio || []).map((item) => [item.title, item])
+  );
   const featuredCards = (album.featuredTracks || [])
     .map((title) => {
       const number = (album.tracks || []).indexOf(title) + 1;
+      const audio = featuredAudioByTitle.get(title);
+      const playback = audio && safeUrl(audio.playbackSrc);
+      const trackId = audio?.id ? String(audio.id) : '';
+      const player = playback
+        ? `<audio class="epk-player" controls preload="metadata" controlslist="nodownload noplaybackrate" src="${esc(playback)}" data-track-id="${esc(trackId)}"></audio>`
+          <button type="button" class="btn btn-ghost js-download" data-track-id="${esc(trackId)}" data-track-title="${esc(title)}">Download</button>`
+        : '';
       return `<li class="feature-card">
-          <span class="feature-num" aria-hidden="true">${number > 0 ? String(number).padStart(2, '0') : ''}</span>
-          <div>
-            <p class="feature-label">Featured track${number > 0 ? ` · Track ${number}` : ''}</p>
-            <h3 class="feature-title">${esc(title)}</h3>
-            <p class="feature-meta">From <em>${esc(album.title)}</em></p>
+          <div class="feature-head">
+            <span class="feature-num" aria-hidden="true">${number > 0 ? String(number).padStart(2, '0') : ''}</span>
+            <div>
+              <p class="feature-label">Featured track${number > 0 ? ` · Track ${number}` : ''}</p>
+              <h3 class="feature-title">${esc(title)}</h3>
+              <p class="feature-meta">From <em>${esc(album.title)}</em></p>
+            </div>
           </div>
+          ${player}
         </li>`;
     })
     .join('');
@@ -261,8 +274,28 @@ export function renderEpkPage(content) {
   </main>
 
   ${renderFooter(artist, contact)}
+  ${renderDownloadDialog()}
 </body>
 </html>`;
+}
+
+function renderDownloadDialog() {
+  return `<dialog class="download-dialog" id="download-dialog" aria-labelledby="download-dialog-title" aria-describedby="download-dialog-copy">
+    <form class="download-form" id="download-form">
+      <h2 id="download-dialog-title">Download featured track</h2>
+      <p id="download-dialog-copy">This download is available to authorized media, radio and industry recipients.</p>
+      <p class="download-track-name" id="download-track-name"></p>
+      <div class="download-field">
+        <label for="download-password">Password</label>
+        <input id="download-password" name="password" type="password" autocomplete="off" required />
+      </div>
+      <p class="download-error" id="download-error" role="alert" hidden></p>
+      <div class="download-actions">
+        <button type="submit" class="btn" id="download-submit">Download track</button>
+        <button type="button" class="btn btn-ghost js-download-cancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>`;
 }
 
 function renderFooter(artist, contact, { onManage = false } = {}) {
