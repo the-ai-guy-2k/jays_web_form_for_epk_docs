@@ -7,6 +7,7 @@
 | 2026-09-30 | ACI-CAE-JGB-WEB-EPK-V1-MANAGEMENT-PLACEHOLDER-009 — `/manage` coming-soon page + footer "Manage EPK" link |
 | 2026-10-08 | ACI-012 — featured-track players + password-protected WAV downloads (Git LFS for masters) |
 | 2026-10-08 | ACI-014 — repair featured audio template syntax in `server/epk.js` |
+| 2026-10-08 | ACI-017 — replace Jay Garrett album cover with Operator-supplied PNG |
 
 Form version at build: `epk-intake-v1`
 
