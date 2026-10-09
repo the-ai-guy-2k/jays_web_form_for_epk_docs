@@ -50,11 +50,7 @@ export function createApp() {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '2mb' }));
 
-  app.post('/api/epk/download', handleEpkDownload);
-  app.all('/api/epk/download', (_req, res) => {
-    res.set('Allow', 'POST');
-    return res.status(405).json({ error: 'Use POST to request a download.' });
-  });
+  app.get('/epk/download/:trackId', handleEpkDownload);
 
   app.get('/health', (_req, res) => {
     res.json({

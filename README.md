@@ -11,7 +11,7 @@ The original intake application is preserved at `/intake` (unlinked, `noindex`).
 - Renderer: `server/epk.js` (server-side HTML, no client framework)
 - Assets: `public/epk/` (`epk.css`, `epk.js`, `img/`, public playback MP3s)
 - Featured-track WAV masters: `media/masters/` (Git LFS; not statically served)
-- Official WAV download: `POST /api/epk/download` with `EPK_DOWNLOAD_PASSWORD` (runtime only)
+- Official WAV download: `GET /epk/download/:trackId` for the two approved featured masters (no password)
 - Missing optional assets (artwork, photos) are omitted gracefully.
 
 ## Intake: what it does

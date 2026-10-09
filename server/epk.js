@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT_DIR } from './config.js';
+import { FEATURED_DOWNLOADS } from './epk-audio.js';
 
 export const EPK_CONTENT_PATH = path.join(ROOT_DIR, 'content', 'jay-garrett-epk.json');
 
@@ -88,9 +89,10 @@ export function renderEpkPage(content) {
       const audio = featuredAudioByTitle.get(title);
       const playback = audio && safeUrl(audio.playbackSrc);
       const trackId = audio?.id ? String(audio.id) : '';
+      const download = trackId ? FEATURED_DOWNLOADS[trackId] : null;
       const player = playback
         ? `<audio class="epk-player" controls preload="metadata" controlslist="nodownload noplaybackrate" src="${esc(playback)}" data-track-id="${esc(trackId)}"></audio>
-          <button type="button" class="btn btn-ghost js-download" data-track-id="${esc(trackId)}" data-track-title="${esc(title)}">Download</button>`
+          ${download ? `<a class="btn btn-ghost js-download" href="/epk/download/${esc(trackId)}" download="${esc(download.downloadName)}">Download</a>` : ''}`
         : '';
       return `<li class="feature-card">
           <div class="feature-head">
@@ -274,28 +276,8 @@ export function renderEpkPage(content) {
   </main>
 
   ${renderFooter(artist, contact)}
-  ${renderDownloadDialog()}
 </body>
 </html>`;
-}
-
-function renderDownloadDialog() {
-  return `<dialog class="download-dialog" id="download-dialog" aria-labelledby="download-dialog-title" aria-describedby="download-dialog-copy">
-    <form class="download-form" id="download-form">
-      <h2 id="download-dialog-title">Download featured track</h2>
-      <p id="download-dialog-copy">This download is available to authorized media, radio and industry recipients.</p>
-      <p class="download-track-name" id="download-track-name"></p>
-      <div class="download-field">
-        <label for="download-password">Password</label>
-        <input id="download-password" name="password" type="password" autocomplete="off" required />
-      </div>
-      <p class="download-error" id="download-error" role="alert" hidden></p>
-      <div class="download-actions">
-        <button type="submit" class="btn" id="download-submit">Download track</button>
-        <button type="button" class="btn btn-ghost js-download-cancel">Cancel</button>
-      </div>
-    </form>
-  </dialog>`;
 }
 
 function renderFooter(artist, contact, { onManage = false } = {}) {

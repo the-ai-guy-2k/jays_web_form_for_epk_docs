@@ -31,7 +31,6 @@ loadEnvFile();
 export const FORM_VERSION = 'epk-intake-v1';
 export const PORT = Number(process.env.PORT || 3000);
 export const TAIG_REVIEW_TOKEN = process.env.TAIG_REVIEW_TOKEN || '';
-export const EPK_DOWNLOAD_PASSWORD = process.env.EPK_DOWNLOAD_PASSWORD || '';
 export const ROOT_DIR = rootDir;
 export const PUBLIC_DIR = path.join(rootDir, 'public');
 export const DATA_DIR = path.join(rootDir, 'data');
@@ -45,9 +44,6 @@ export function assertConfig() {
   const missing = [];
   if (!TAIG_REVIEW_TOKEN || TAIG_REVIEW_TOKEN.includes('change-me')) {
     missing.push('TAIG_REVIEW_TOKEN');
-  }
-  if (!EPK_DOWNLOAD_PASSWORD) {
-    missing.push('EPK_DOWNLOAD_PASSWORD');
   }
   if (missing.length) {
     console.warn(
