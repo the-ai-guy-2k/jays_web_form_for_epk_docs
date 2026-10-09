@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT_DIR } from './config.js';
-import { FEATURED_DOWNLOADS } from './epk-audio.js';
 
 export const EPK_CONTENT_PATH = path.join(ROOT_DIR, 'content', 'jay-garrett-epk.json');
 
@@ -89,10 +88,8 @@ export function renderEpkPage(content) {
       const audio = featuredAudioByTitle.get(title);
       const playback = audio && safeUrl(audio.playbackSrc);
       const trackId = audio?.id ? String(audio.id) : '';
-      const download = trackId ? FEATURED_DOWNLOADS[trackId] : null;
       const player = playback
-        ? `<audio class="epk-player" controls preload="metadata" controlslist="nodownload noplaybackrate" src="${esc(playback)}" data-track-id="${esc(trackId)}"></audio>
-          ${download ? `<a class="btn btn-ghost js-download" href="/epk/download/${esc(trackId)}" download="${esc(download.downloadName)}">Download</a>` : ''}`
+        ? `<audio class="epk-player" controls preload="metadata" controlslist="nodownload noplaybackrate" src="${esc(playback)}" data-track-id="${esc(trackId)}"></audio>`
         : '';
       return `<li class="feature-card">
           <div class="feature-head">

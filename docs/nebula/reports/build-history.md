@@ -10,6 +10,7 @@
 | 2026-10-08 | ACI-017 — replace Jay Garrett album cover with Operator-supplied PNG |
 | 2026-10-08 | ACI-018 — fix narrow-mobile album cover clipping (hero grid `min-width: 0`) |
 | 2026-10-09 | ACI-019 — remove password gate from featured WAV downloads |
+| 2026-10-09 | ACI-023 — remove public music downloads; Featured Music is listening-only |
 
 Form version at build: `epk-intake-v1`
 

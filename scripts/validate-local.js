@@ -859,7 +859,7 @@ const manageHtml = manageRes.text;
   } else fail('MANAGE-PRIVACY. /manage leaks');
 }
 
-// --- Featured audio + public WAV download ---
+// --- Featured audio (listening only; no public master download) ---
 const audioJs = fs.readFileSync(path.join(root, 'public', 'epk', 'epk.js'), 'utf8');
 {
   const karmaPlayer = html.includes('src="/epk/audio/jay-garrett-karma-catching-up.mp3"');
@@ -872,24 +872,26 @@ const audioJs = fs.readFileSync(path.join(root, 'public', 'epk', 'epk.js'), 'utf
 }
 
 {
-  const karmaLink = html.includes('href="/epk/download/karma-catching-up"') && html.includes('download="Jay-Garrett-Karma-Catching-Up.wav"');
-  const stompLink = html.includes('href="/epk/download/something-we-can-stomp-to"') && html.includes('download="Jay-Garrett-Something-We-Can-Stomp-To.wav"');
-  const noPasswordUi =
+  const noMusicDownloadUi =
+    !html.includes('/epk/download/') &&
+    !html.includes('js-download') &&
+    !html.includes('Jay-Garrett-Karma-Catching-Up.wav') &&
+    !html.includes('Jay-Garrett-Something-We-Can-Stomp-To.wav') &&
     !html.includes('download-dialog') &&
     !html.includes('download-password') &&
     !html.includes('type="password"') &&
     !html.includes('/api/epk/download') &&
     !audioJs.includes('password') &&
-    !audioJs.includes('/api/epk/download');
-  if (karmaLink && stompLink && noPasswordUi) {
-    pass('AUDIO-UI. Public Download links present; password UI and old API absent');
-  } else fail('AUDIO-UI. Download links / leftover password UI');
+    !audioJs.includes('/epk/download');
+  if (noMusicDownloadUi) {
+    pass('AUDIO-UI. No public music Download UI, password UI, or master-download routes in HTML/JS');
+  } else fail('AUDIO-UI. Leftover music download or password UI');
 }
 
 {
   const css = fs.readFileSync(path.join(root, 'public', 'epk', 'epk.css'), 'utf8');
-  if (css.includes('.epk-player') && css.includes('.js-download') && !css.includes('.download-dialog')) {
-    pass('AUDIO-PRINT. Player and download UI hidden in print stylesheet');
+  if (css.includes('.epk-player') && !css.includes('.js-download') && !css.includes('.download-dialog')) {
+    pass('AUDIO-PRINT. Players hidden in print stylesheet; download CSS gone');
   } else fail('AUDIO-PRINT. Print CSS');
 }
 
@@ -907,58 +909,32 @@ const audioJs = fs.readFileSync(path.join(root, 'public', 'epk', 'epk.js'), 'utf
     path.join(root, 'public', 'epk', 'epk.js'),
     path.join(root, 'server', 'epk.js'),
     path.join(root, 'server', 'config.js'),
-    path.join(root, 'server', 'epk-audio.js'),
+    path.join(root, 'server', 'index.js'),
     path.join(root, '.env.example'),
   ];
   const leaked = sources.filter((file) => fs.readFileSync(file, 'utf8').includes('EPK_DOWNLOAD_PASSWORD'));
   if (!html.includes('EPK_DOWNLOAD_PASSWORD') && !audioJs.includes('EPK_DOWNLOAD_PASSWORD') && !leaked.length) {
-    pass('AUDIO-SECRET. EPK_DOWNLOAD_PASSWORD removed from runtime and public source');
+    pass('AUDIO-SECRET. EPK_DOWNLOAD_PASSWORD remains absent from runtime and public source');
   } else fail('AUDIO-SECRET. Password env still referenced', leaked.join(', '));
-}
-
-{
-  const badId = await request(app, 'GET', '/epk/download/not-a-track');
-  const traversal = await request(app, 'GET', '/epk/download/../server/config.js');
-  const encoded = await request(app, 'GET', '/epk/download/..%2Fserver%2Fconfig.js');
-  const listing = await request(app, 'GET', '/media/masters');
-  const listingSlash = await request(app, 'GET', '/media/masters/');
-  const directMaster = await request(app, 'GET', '/media/masters/03Karma%20Catching%20Up%20MSTR%2024bit_48hz.wav');
-  const gone = await request(app, 'POST', '/api/epk/download', {
-    headers: { 'Content-Type': 'application/json' },
-    body: { trackId: 'karma-catching-up', password: 'anything' },
-  });
-  if (
-    badId.status === 404 &&
-    traversal.status === 404 &&
-    encoded.status === 404 &&
-    listing.status === 404 &&
-    listingSlash.status === 404 &&
-    directMaster.status === 404 &&
-    gone.status === 404
-  ) {
-    pass('AUDIO-PATH. Unsupported IDs, traversal, directory browsing, and old password API are blocked');
-  } else fail('AUDIO-PATH. File-selection controls', `bad=${badId.status} trav=${traversal.status} enc=${encoded.status} list=${listing.status} master=${directMaster.status} old=${gone.status}`);
 }
 
 {
   const karma = await request(app, 'GET', '/epk/download/karma-catching-up');
   const stomp = await request(app, 'GET', '/epk/download/something-we-can-stomp-to');
-  const karmaOk =
-    karma.status === 200 &&
-    karma.headers.get('content-disposition')?.includes('Jay-Garrett-Karma-Catching-Up.wav') &&
-    karma.buffer.length === 77377074 &&
-    karma.buffer.slice(0, 4).toString() === 'RIFF';
-  const stompOk =
-    stomp.status === 200 &&
-    stomp.headers.get('content-disposition')?.includes('Jay-Garrett-Something-We-Can-Stomp-To.wav') &&
-    stomp.buffer.length === 59968382 &&
-    stomp.buffer.slice(0, 4).toString() === 'RIFF';
-  if (karmaOk && stompOk) {
-    pass('AUDIO-DOWNLOAD. Public GET returns the approved WAV masters');
+  const listing = await request(app, 'GET', '/media/masters');
+  const listingSlash = await request(app, 'GET', '/media/masters/');
+  const directMaster = await request(app, 'GET', '/media/masters/03Karma%20Catching%20Up%20MSTR%2024bit_48hz.wav');
+  const gone = await request(app, 'POST', '/api/epk/download', {
+    headers: { 'Content-Type': 'application/json' },
+    body: { trackId: 'karma-catching-up' },
+  });
+  const notWav = (res) => res.status === 404 && !res.headers.get('content-type')?.includes('audio/wav') && res.buffer.slice(0, 4).toString() !== 'RIFF';
+  if (notWav(karma) && notWav(stomp) && listing.status === 404 && listingSlash.status === 404 && directMaster.status === 404 && gone.status === 404) {
+    pass('AUDIO-DOWNLOAD-GONE. Public master-download routes and /media/masters are unavailable');
   } else {
     fail(
-      'AUDIO-DOWNLOAD. Download payload',
-      `karma=${karma.status}/${karma.buffer?.length} stomp=${stomp.status}/${stomp.buffer?.length}`
+      'AUDIO-DOWNLOAD-GONE. Master still reachable',
+      `karma=${karma.status} stomp=${stomp.status} list=${listing.status} master=${directMaster.status}`
     );
   }
 }

@@ -560,10 +560,6 @@ a:hover {
   accent-color: var(--amber);
 }
 
-.feature-card .js-download {
-  align-self: flex-start;
-}
-
 /* Track list */
 .tracklist {
   margin: 0;
@@ -803,8 +799,7 @@ a:hover {
   .footer-manage,
   .note,
   .btn,
-  .epk-player,
-  .js-download {
+  .epk-player {
     display: none !important;
   }
 

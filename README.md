@@ -10,8 +10,8 @@ The original intake application is preserved at `/intake` (unlinked, `noindex`).
 - Content: `content/jay-garrett-epk.json` (structured artist data — edit here, not in templates)
 - Renderer: `server/epk.js` (server-side HTML, no client framework)
 - Assets: `public/epk/` (`epk.css`, `epk.js`, `img/`, public playback MP3s)
-- Featured-track WAV masters: `media/masters/` (Git LFS; not statically served)
-- Official WAV download: `GET /epk/download/:trackId` for the two approved featured masters (no password)
+- Featured-track WAV masters: `media/masters/` (Git LFS; not publicly served)
+- Featured-track public listening: MP3 players only (no public master download)
 - Missing optional assets (artwork, photos) are omitted gracefully.
 
 ## Intake: what it does

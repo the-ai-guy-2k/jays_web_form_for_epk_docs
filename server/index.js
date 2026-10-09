@@ -6,7 +6,6 @@ import {
   PUBLIC_DIR,
   TAIG_REVIEW_TOKEN,
 } from './config.js';
-import { handleEpkDownload } from './epk-audio.js';
 import { timingSafeEqualString } from './timing-safe.js';
 import {
   getByResumeToken,
@@ -49,8 +48,6 @@ export function createApp() {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '2mb' }));
-
-  app.get('/epk/download/:trackId', handleEpkDownload);
 
   app.get('/health', (_req, res) => {
     res.json({
